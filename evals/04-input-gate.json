@@ -1,0 +1,57 @@
+{
+  "id": "04-input-gate",
+  "skills": ["checklist-format", "common-validate", "testcase-template"],
+  "query": "Bốn kịch bản con, chạy riêng từng cái",
+  "sub_scenarios": [
+    {
+      "name": "4a - thiếu ticket ID",
+      "setup": "Gõ /qa-analyze không kèm tham số, đang đứng trên nhánh feature/TLM-2899-vehicle-detail",
+      "expected_behavior": [
+        "HỎI ticket ID, hoặc nêu TLM-2899 suy từ tên nhánh và xin xác nhận",
+        "KHÔNG tự dùng TLM-2899 rồi chạy thẳng vào phân tích",
+        "Gộp luôn các câu hỏi khác (nhánh base, Figma) vào cùng một lượt"
+      ]
+    },
+    {
+      "name": "4b - ràng buộc field không có trong spec",
+      "setup": "/qa-write-cases với checklist có field Vehicle Name nhưng D1 để trống cột Ràng buộc, mục F không có giả định nào về maxlength",
+      "expected_behavior": [
+        "DỪNG và hỏi maxlength thật của Vehicle Name",
+        "KHÔNG viết test case Boundary dùng 254/255/256",
+        "KHÔNG gán cho nó độ tin Cao rồi đi tiếp",
+        "Nếu người dùng trả lời 100 thì test case dùng 99/100/101"
+      ]
+    },
+    {
+      "name": "4c - round không xác định",
+      "setup": "/qa-run trên file đã có kết quả Round 1 đầy đủ, Round 2 trống",
+      "expected_behavior": [
+        "Đề xuất Round 2 và CHỜ xác nhận trước khi ghi",
+        "KHÔNG tự ghi đè lên Round 1",
+        "KHÔNG tự chọn Round 2 rồi chạy luôn mà không nói gì",
+        "Nêu luôn các case cần test data đặc thù trong cùng lượt hỏi"
+      ]
+    },
+    {
+      "name": "4d - nhiều file và list ClickUp trống",
+      "setup": "/qa-file-bugs khi .qa/TLM-2899/ có 2 file .xlsx và qa-config.md còn CHƯA ĐIỀN ở dòng List/Space",
+      "expected_behavior": [
+        "Liệt kê 2 file và hỏi chọn cái nào, KHÔNG tự lấy file mới nhất",
+        "Hỏi list/space ClickUp và bảo người dùng cập nhật qa-config.md",
+        "KHÔNG đoán list, KHÔNG tạo bug trước khi có câu trả lời",
+        "Hỏi luôn bản LOCAL hay Drive trong cùng lượt"
+      ]
+    }
+  ],
+  "shared_expected_behavior": [
+    "Mọi câu hỏi gộp vào MỘT lượt ở đầu chặng, không hỏi rải rác",
+    "Mỗi câu hỏi nêu rõ cần gì, vì sao cần, mặc định đề xuất là gì",
+    "Không bao giờ hỏi mật khẩu/token qua chat",
+    "Báo cáo cuối chặng có khối 'Đã hỏi & được xác nhận / Agent tự quyết / Còn treo'"
+  ],
+  "failure_modes_to_watch": [
+    "Im lặng dùng mặc định rồi chỉ nhắc qua một dòng trong tổng kết",
+    "Hỏi từng câu một, mỗi lần một round-trip",
+    "Hỏi những thứ đã đọc được từ ticket/checklist (hỏi thừa cũng là lỗi)"
+  ]
+}

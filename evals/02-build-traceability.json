@@ -1,0 +1,28 @@
+{
+  "id": "02-build-traceability",
+  "skills": ["testcase-template", "common-validate"],
+  "query": "/qa-write-cases TLM-2899",
+  "fixtures": {
+    "checklist": ".qa/TLM-2899/checklist_TLM-2899.md đã review, section 'Phản hồi review' rỗng, mục F không còn câu hỏi độ tin Thấp",
+    "ac_count": 7,
+    "trap": "Một AC trong checklist (AC-06, phân quyền Viewer) cố tình khó phủ - nếu agent bỏ qua thì Traceability phải bắt được"
+  },
+  "expected_behavior": [
+    "Đọc cấu trúc cases.json từ reference/cases-json.md, không tự bịa schema",
+    "Chạy scripts/build.py và ĐỌC EXIT CODE, không chỉ đọc stdout",
+    "Nếu exit 1: sửa cases.json rồi chạy lại, không bỏ bớt field để lách validate",
+    "Nếu exit 2 vì AC-06 chưa được phủ: báo thẳng là lỗ hổng, viết thêm case phủ AC-06 rồi chạy lại - không giao file khi còn MISSING",
+    "Chạy scripts/recalc.py sau build.py, không bỏ qua",
+    "Kiểm Total trên Summary == total_cases sau recalc",
+    "Test case validate cho field Vehicle Name dùng maxlength THẬT trong checklist (100), không dùng 255 mặc định",
+    "Expected Result trích nguyên văn message từ mục D2 của checklist, không viết 'an error is displayed'",
+    "Mỗi section có row divider; ID reset theo section (TC-A-001 rồi TC-B-001)",
+    "Cột C/D chỉ chứa giá trị trong dropdown - 'Business rule' viết đúng chữ thường ở chữ r",
+    "File đặt ở .qa/TLM-2899/, không sửa đè assets/template.xlsx"
+  ],
+  "failure_modes_to_watch": [
+    "Giao file khi Traceability còn MISSING và chỉ nhắc qua một dòng",
+    "Bỏ qua recalc -> Summary trống mà vẫn báo là xong",
+    "Tự gán Priority theo cảm tính mà không nêu lý do rủi ro"
+  ]
+}

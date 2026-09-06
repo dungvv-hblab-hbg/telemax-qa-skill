@@ -1,0 +1,20 @@
+# .gitignore của CHÍNH repo harness.
+# Bản dành cho repo đích nằm ở gitignore.snippet (install.sh append vào đó).
+
+node_modules/
+package-lock.json
+__pycache__/
+*.pyc
+.venv/
+.claude/.venv/
+
+# kết quả chạy thử ngay trong repo này
+.qa/
+.playwright-mcp-profile/
+.playwright-mcp-output/
+telemax-e2e/.env
+telemax-e2e/playwright/.auth/
+telemax-e2e/test-results/
+telemax-e2e/playwright-report/
+
+.DS_Store

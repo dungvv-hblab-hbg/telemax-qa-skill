@@ -1,0 +1,45 @@
+# LƯU Ý: gitignore KHÔNG hỗ trợ comment cuối dòng.
+# `.qa/   # ghi chú` là một pattern rác, không ignore gì cả.
+# Comment luôn nằm trên dòng riêng.
+
+# ── Đầu ra của harness QA ──────────────────────────────────────────────
+# checklist + file test case sinh theo ticket
+.qa/
+# backup do write_defects.py tạo
+*.xlsx.bak
+
+# ── Playwright MCP ─────────────────────────────────────────────────────
+# profile trình duyệt của MCP (giữ session login)
+.playwright-mcp-profile/
+# nơi MCP ghi screenshot; agent chuyển vào .qa/ rồi dọn
+.playwright-mcp-output/
+
+# ── Playwright (telemax-e2e/) ──────────────────────────────────────────
+.env
+.env.*
+!.env.example
+# storageState sau khi login
+playwright/.auth/
+storageState.json
+test-results/
+playwright-report/
+blob-report/
+
+# ── Postman / newman (tests/postman/) ──────────────────────────────────
+# report newman (nay nằm trong .qa/, đã ignore ở trên)
+result.json
+# file env chứa token/secret — KHÔNG commit
+*.postman_environment.json
+!*.example.postman_environment.json
+
+# ── Python ─────────────────────────────────────────────────────────────
+# venv chuẩn của harness, do /qa-setup tạo
+.claude/.venv/
+
+# ── Node ───────────────────────────────────────────────────────────────
+node_modules/
+package-lock.json
+
+# ── Python ─────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc

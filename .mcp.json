@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--user-data-dir",
+        ".playwright-mcp-profile",
+        "--output-dir",
+        ".playwright-mcp-output",
+        "--viewport-size",
+        "1440x900",
+        "--timeout-action",
+        "30000",
+        "--timeout-navigation",
+        "120000",
+        "--timeout-settle",
+        "1000"
+      ]
+    }
+  }
+}

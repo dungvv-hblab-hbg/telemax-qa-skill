@@ -1,0 +1,104 @@
+{
+  "id": "03-defects-manual-guard",
+  "skills": [
+    "testcase-template",
+    "clickup-bug-format"
+  ],
+  "query": "/qa-run TLM-2899 rồi /qa-file-bugs TLM-2899",
+  "fixtures": {
+    "testcases": "20 case. Kết quả dựng sẵn: 15 Pass, 3 Fail, 2 không tự động hoá được (cần thiết bị thật)",
+    "user_review": "Sau /qa-run, người dùng đặt Fix Status = \"Won't fix\" cho 1 trong 3 dòng Fail, và KHÔNG xoá dòng nào"
+  },
+  "expected_behavior": [
+    "2 case không tự động hoá được: ghi Result = Blocked VÀ cột N bắt đầu bằng '[MANUAL] <lý do>'",
+    "Không case nào còn Not Run khi test-runner kết thúc",
+    "Dùng MỘT phiên trình duyệt cho cả chặng — kể cả khi điều tra spec fail (2a-1) lẫn dò case mới (2a-2); không browser_close ở bất kỳ đâu, kể cả cuối chặng",
+    "Reset giữa case dùng mức nhẹ nhất còn hiệu quả: cùng màn hình thì không điều hướng, khác màn hình thì bấm menu trong app, chỉ khi kẹt mới browser_navigate cứng",
+    "Sắp thứ tự chạy gom theo màn hình, không nhảy qua lại giữa các màn",
+    "Sau mỗi lần navigate, chờ phần tử chứa dữ liệu thật xuất hiện rồi mới thao tác — không chờ cứng, không networkidle",
+    "write_defects.py --mode fill tạo đúng 3 dòng Defects (chỉ case Fail), KHÔNG tạo dòng cho 2 case [MANUAL]",
+    "Phase 1 chụp một ảnh cho mỗi case tại mốc kiểm Expected, tên <TC-ID>.png hoặc <TC-ID>-FAIL.png",
+    "Gom ảnh về .qa/TLM-2899/phase1/ bằng MỘT lệnh mv sau khi chạy xong nhánh UI, không mv từng file",
+    "Actual của case Fail ghi kèm tên file ảnh để người review mở đối chiếu",
+    "Actual Result do agent điền từ log test thật (message/status cụ thể), không để trống bắt người dùng điền",
+    "Dòng defect được APPEND sau dòng cuối có TC ID, không lấp ô trống ở giữa",
+    "test-runner DỪNG sau khi điền Defects - không tạo bug, không upload Drive",
+    "bug-filer hỏi người dùng đã review bản LOCAL hay bản Drive trước khi đọc file",
+    "write_defects.py --mode read trả về 2 bug (bỏ dòng Won't fix), và báo phần skipped kèm lý do",
+    "Search ClickUp chống trùng theo TC ID trước khi tạo bug",
+    "DỪNG xin duyệt danh sách bug + assignee MỘT LẦN cho cả lô, không hỏi từng cái",
+    "writeback dùng bugmap khoá theo TC ID, không theo số dòng",
+    "Chạy recalc.py sau writeback",
+    "Hỏi trước khi upload Google Drive, và chỉ upload SAU khi đã writeback Ticket ID",
+    "Log một dòng qa-log.sh cho MỖI case khi bắt đầu, kèm số đếm dồn (VD 'case 12/45 · TC-B-003 · (11 xong: 9P 2F)')",
+    "Lệnh npx playwright test có --reporter=line và tee vào .qa/<ticket>/progress.log"
+  ],
+  "failure_modes_to_watch": [
+    "Tạo bug cho case [MANUAL] -> bug rác gửi cho dev (đây là lỗi nghiêm trọng nhất)",
+    "Coi dòng bị xoá là tín hiệu từ chối thay vì Fix Status = Won't fix",
+    "Tạo bug trước khi được duyệt, hoặc upload Drive trước khi writeback",
+    "Đoán list/space ClickUp khi qa-config.md còn CHƯA ĐIỀN",
+    "Case Fail mà không có ảnh bằng chứng — bug gửi dev không dựng lại được",
+    "Đóng/mở lại trình duyệt giữa các case — tài khoản có 2FA sẽ phải nhập mã lại mỗi lần",
+    "Đóng trình duyệt khi kết thúc chặng — lệnh sau phải khởi động lại và chờ SPA tải nguội",
+    "Ghi Fail cho case mà thực ra chỉ là chưa chờ API trả dữ liệu — bug ma gửi cho dev",
+    "Chỉ log theo bước nên người dùng ngồi nhìn màn hình im lặng hàng chục phút, tưởng treo",
+    "browser_navigate cứng giữa mọi case — mỗi lần 10-30s tải lại bundle, 45 case thành hơn 15 phút thuần chờ",
+    "Script seed báo LOGGED_IN nhờ session cũ mà chưa hề điền form — che mất lỗi ở phần đăng nhập"
+  ],
+  "sub_scenarios": [
+    {
+      "name": "3a - thiếu MCP Playwright, có case chưa có spec",
+      "setup": "Chưa cài Playwright MCP; 8 case UI trong đó 3 case chưa có trong tests/TLM-2899.spec.ts",
+      "expected_behavior": [
+        "DỪNG, không chạy nhánh UI",
+        "Hướng dẫn đúng: claude mcp add playwright -- npx -y @playwright/mcp@latest, cấu hình vào .mcp.json ở GỐC repo, kiểm bằng /mcp",
+        "KHÔNG hướng dẫn kiểu OAuth ('/mcp -> Authenticate -> Allow access') — Playwright MCP là server local, không có bước đó",
+        "KHÔNG bịa selector, KHÔNG export spec cho 3 case chưa dò được",
+        "KHÔNG tự cài thay người dùng"
+      ]
+    },
+    {
+      "name": "3b - thiếu MCP nhưng mọi case đã có spec",
+      "setup": "Chưa cài Playwright MCP; cả 8 case UI đều đã có trong tests/TLM-2899.spec.ts",
+      "expected_behavior": [
+        "VẪN chạy được bằng npx playwright test — không dừng cả chặng",
+        "Báo trước: nếu có spec fail thì không điều tra được bằng MCP, sẽ để 'chưa kết luận'",
+        "Không nhầm sang việc bắt cài MCP mới cho chạy"
+      ]
+    },
+    {
+      "name": "3c - hai phase khi có case mới",
+      "setup": "Có MCP; 2 case UI chưa có spec",
+      "expected_behavior": [
+        "Bước 0: tra tests/TLM-2899.spec.ts trước, xác định 2 case chưa có",
+        "Phase 1: dò bằng MCP Playwright cho đúng 2 case đó, không dò lại case đã có spec",
+        "Phase 2: gọi playwright-export ghi vào cùng file tests/TLM-2899.spec.ts",
+        "Phase 3: chạy npx playwright test verify và đối chiếu Phase 1",
+        "Kết quả ghi vào Excel là của Phase 1, không phải của lần verify"
+      ]
+    },
+    {
+      "name": "3d - session hết hạn giữa chặng",
+      "setup": "Đang chạy case thứ 7/12 thì app đẩy về trang login",
+      "expected_behavior": [
+        "Nhận ra bị đẩy về login (URL /login hoặc ô mật khẩu xuất hiện lại)",
+        "Kiểm trước xem case đang chạy có Expected liên quan tới giữ đăng nhập không — nếu có thì đó LÀ kết quả, ghi theo Expected, không tự phục hồi",
+        "Không phải vậy thì đăng nhập lại từ telemax-e2e/.env, không hỏi mật khẩu qua chat",
+        "Chạy lại case số 7 TỪ ĐẦU, không chạy tiếp từ giữa",
+        "Ghi một dòng qa-log.sh và nêu số lần bị đẩy ra trong tổng kết",
+        "Bị đẩy ra 3 lần liên tiếp cùng một case thì DỪNG chặng, không đăng nhập lại lần thứ tư"
+      ]
+    },
+    {
+      "name": "3e - session của code hết hạn, cả loạt spec fail",
+      "setup": "Bước 2a-1: 9/9 case chạy bằng npx playwright test đều fail, đều bị redirect về /login",
+      "expected_behavior": [
+        "KHÔNG ghi Fail cho cả 9 case — nhận ra đây là session hết hạn, không phải 9 bug",
+        "Báo người dùng chạy cd telemax-e2e && npm run auth rồi chạy lại",
+        "Chỉ ghi Fail sau khi chạy lại với session mới mà vẫn hỏng",
+        "Không tạo defect nào trước khi phân biệt xong"
+      ]
+    }
+  ]
+}

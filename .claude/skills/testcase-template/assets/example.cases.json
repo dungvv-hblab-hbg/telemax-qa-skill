@@ -1,0 +1,121 @@
+{
+  "_comment": "Mẫu tham chiếu cho build.py. Cấu trúc đầy đủ ở docstring đầu build.py.",
+  "cover": {
+    "project": "Fleet Management",
+    "module": "Vehicle Detail Page",
+    "version": "1.0",
+    "source": "ClickUp TLM-2899 · Figma: /file/xxx/VehiclePage",
+    "create_date": "2026-08-23",
+    "change_desc": "Khởi tạo bộ test case theo spec AC-01..AC-03"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-01",
+      "text": "Mở trang chi tiết từ danh sách Devices, tiêu đề là tên xe"
+    },
+    {
+      "id": "AC-02",
+      "text": "Trang cuộn đơn, không có tab bar"
+    },
+    {
+      "id": "AC-03",
+      "text": "Tên xe bắt buộc, tối đa 100 ký tự"
+    }
+  ],
+  "sections": [
+    {
+      "divider": "A. Page & Entry",
+      "cases": [
+        {
+          "id": "TC-A-001",
+          "section": "Page & Entry",
+          "type": "Functional",
+          "priority": "High",
+          "acs": [
+            "AC-01"
+          ],
+          "title_en": "Open detail page from Devices list (AC-01)",
+          "title_vn": "Mở trang chi tiết từ danh sách Devices (AC-01)",
+          "precond_en": "Logged in; at least one vehicle exists",
+          "precond_vn": "Đã đăng nhập; có ít nhất một xe",
+          "steps_en": "1. Open the Devices menu\n2. Click the row for vehicle 51A-12345",
+          "steps_vn": "1. Mở menu Devices\n2. Bấm vào dòng của xe 51A-12345",
+          "data_en": "rego = 51A-12345 · name = Truck 07 — North Depot",
+          "data_vn": "biển số = 51A-12345 · tên = Truck 07 — North Depot",
+          "expected_en": "1. Detail page of the selected vehicle opens\n2. page heading shows the vehicle NAME, not the rego",
+          "expected_vn": "1. Mở đúng trang chi tiết của xe vừa chọn\n2. Tiêu đề trang hiển thị TÊN xe, không phải biển số",
+          "note_en": "",
+          "note_vn": ""
+        },
+        {
+          "id": "TC-A-002",
+          "section": "Page & Entry",
+          "type": "UI",
+          "priority": "Medium",
+          "acs": [
+            "AC-02"
+          ],
+          "title_en": "Single scrolling page, no tab bar (AC-02)",
+          "title_vn": "Trang cuộn đơn, không có tab bar (AC-02)",
+          "precond_en": "On the vehicle detail page",
+          "precond_vn": "Đang ở trang chi tiết xe",
+          "steps_en": "1. Look at the top of the detail page",
+          "steps_vn": "1. Nhìn phần đầu của trang chi tiết",
+          "data_en": "-",
+          "data_vn": "-",
+          "expected_en": "1. No tab bar is rendered\n2. Cards are stacked in the designed order",
+          "expected_vn": "1. Trang không có thanh tab\n2. Các thẻ thông tin xếp đúng thứ tự trong thiết kế",
+          "note_en": "",
+          "note_vn": ""
+        }
+      ]
+    },
+    {
+      "divider": "B. Vehicle name field",
+      "cases": [
+        {
+          "id": "TC-B-001",
+          "section": "Vehicle name field",
+          "type": "Validation",
+          "priority": "High",
+          "acs": [
+            "AC-03"
+          ],
+          "title_en": "Empty vehicle name shows the required message (AC-03)",
+          "title_vn": "Bỏ trống tên xe hiện message bắt buộc (AC-03)",
+          "precond_en": "Edit mode open on the vehicle detail page",
+          "precond_vn": "Đang mở chế độ Edit ở trang chi tiết xe",
+          "steps_en": "1. Clear the Vehicle name field\n2. Click Save",
+          "steps_vn": "1. Xoá trắng ô \"Vehicle Name\"\n2. Bấm nút \"Save\"",
+          "data_en": "vehicle name = (empty)",
+          "data_vn": "tên xe = (rỗng)",
+          "expected_en": "1. Record is not saved\n2. Message shown verbatim: \"Vehicle name is required.\"",
+          "expected_vn": "1. Hệ thống không lưu\n2. Hiện đúng câu: \"Vehicle name is required.\"",
+          "note_en": "Message from checklist D2 #17",
+          "note_vn": "Message lấy từ D2 #17 của checklist"
+        },
+        {
+          "id": "TC-B-002",
+          "section": "Vehicle name field",
+          "type": "Boundary",
+          "priority": "Medium",
+          "acs": [
+            "AC-03"
+          ],
+          "title_en": "Vehicle name at 100 / 101 characters (AC-03)",
+          "title_vn": "Tên xe ở mốc 100 / 101 ký tự (AC-03)",
+          "precond_en": "Edit mode open",
+          "precond_vn": "Đang mở chế độ Edit",
+          "steps_en": "1. Enter exactly 100 characters, Save\n2. Enter 101 characters, Save",
+          "steps_vn": "1. Nhập đúng 100 ký tự rồi bấm \"Save\"\n2. Nhập 101 ký tự rồi bấm \"Save\"",
+          "data_en": "100 chars · 101 chars",
+          "data_vn": "100 ký tự · 101 ký tự",
+          "expected_en": "1. 100 chars saves successfully\n2. 101 chars is rejected with \"Vehicle name must be 100 characters or fewer.\"",
+          "expected_vn": "1. 100 ký tự lưu thành công\n2. 101 ký tự bị chặn kèm \"Vehicle name must be 100 characters or fewer.\"",
+          "note_en": "Boundary case is UI-observable -> Playwright branch, NOT manual",
+          "note_vn": "Case Boundary quan sát được trên UI -> nhánh Playwright, KHÔNG phải manual"
+        }
+      ]
+    }
+  ]
+}

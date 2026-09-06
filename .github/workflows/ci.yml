@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke:
+    name: Smoke test tầng script
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Dựng venv chuẩn của harness
+        run: |
+          python3 -m venv .claude/.venv
+          .claude/.venv/bin/python -m pip install --quiet openpyxl
+
+      - name: LibreOffice (cho recalc.py)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libreoffice-calc
+
+      - name: Smoke test
+        run: bash .claude/scripts/smoke-scripts.sh
+
+  e2e-typecheck:
+    name: Typecheck project Playwright
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: telemax-e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --ignore-scripts
+      - run: npx tsc --noEmit
+      - name: Spec phải được nhận diện đúng project
+        run: npx playwright test --list
+
+  lint:
+    name: Kiểm cấu trúc harness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --quiet pyyaml
+      - name: Frontmatter, link, JSON, cú pháp shell
+        run: python3 scripts/lint-harness.py
+      - name: gitignore.snippet phải thực sự ignore
+        run: bash scripts/check-gitignore.sh

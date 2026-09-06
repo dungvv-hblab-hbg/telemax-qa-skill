@@ -1,0 +1,25 @@
+{
+  "name": "telemax-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "E2E tests cho Telemax fleet dashboard. Spec gom một file cho một ticket.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "check": "playwright test --project=check",
+    "test:prod": "playwright test --project=prod",
+    "auth": "playwright test --project=setup",
+    "auth:headed": "playwright test --project=setup --headed",
+    "auth:prod": "playwright test --project=setup-prod",
+    "auth:prod:headed": "playwright test --project=setup-prod --headed",
+    "report": "playwright show-report",
+    "postinstall": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "dotenv": "^16.4.5",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
