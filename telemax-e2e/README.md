@@ -102,10 +102,10 @@ hai môi trường là đường ngắn nhất tới chuyện chạy nhầm test
 ## Chạy spec
 
 ```bash
-npx playwright test tests/TLM-2899.spec.ts                 # cả ticket, một lệnh
-npx playwright test tests/TLM-2899.spec.ts -g "TC-A-001"   # một case
-npx playwright test -g "Vehicle Detail"                    # regression theo màn hình
-npx playwright test --headed                               # xem trình duyệt chạy
+npx playwright test --project=chromium tests/TLM-2899.spec.ts                 # cả ticket, một lệnh
+npx playwright test --project=chromium tests/TLM-2899.spec.ts -g "TC-A-001"   # một case
+npx playwright test --project=chromium -g "Vehicle Detail"                    # regression theo màn hình
+npx playwright test --project=chromium --headed                               # xem trình duyệt chạy
 npm run report                                             # mở HTML report
 ```
 

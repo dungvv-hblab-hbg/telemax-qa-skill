@@ -5,40 +5,73 @@ argument-hint: TLM-XXXX
 
 Áp phản hồi review vào checklist của ticket **$1**.
 
-## Cổng đầu vào — làm TRƯỚC khi gọi agent
+**Chặng này chạy THẲNG trong session chính, không gọi subagent.** Nó chỉ đọc một file
+`.md` local, sửa vài mục theo số thứ tự, rồi ghi lại — không MCP, không ticket, không
+Excel, output nhỏ. Đưa vào subagent thì mất ~8.500 token cho một việc vài tool call,
+và **mất luôn khả năng hỏi lại**: phản hồi mơ hồ là đúng lúc cần hỏi, mà subagent thì
+không dừng chờ người được — nó buộc phải kết thúc và bạn chạy lại lệnh từ đầu.
 
-Ba mức: **Chặn** = không có mặc định an toàn, phải hỏi · **Xác nhận** = có mặc định
-nhưng mặc định vẫn là phán đoán, nêu ra chờ tôi gật · **Tự quyết** = chuyên môn của
-bạn, làm luôn nhưng liệt kê trong tổng kết. Gộp mọi câu hỏi vào MỘT lượt, mỗi câu nêu
-rõ mặc định đề xuất. Không bao giờ hỏi mật khẩu/token qua chat.
+## Cổng đầu vào
 
 1. File `.qa/$1/checklist_$1.md` tồn tại không? Không → dừng, bảo tôi chạy
    `/qa-analyze $1` trước.
-2. Section **"Phản hồi review"** có nội dung không? **Rỗng thì hỏi tôi**, đừng hiểu
-   là "OK hết" rồi báo xong.
-3. Đọc lướt phản hồi, gộp thành một lượt hỏi nếu có:
-   - số thứ tự không tồn tại trong checklist (VD `#99`) → hỏi tôi ý là mục nào;
-   - phản hồi mơ hồ kiểu "#4 sai" mà không nói sai chỗ nào → hỏi lại, **đừng tự sửa
-     theo phỏng đoán**.
+2. Section **"Phản hồi review"** có nội dung không? **Rỗng thì KHÔNG hỏi lại** —
+   nói thẳng một lượt rồi kết thúc:
 
-Trước khi gọi agent, nói với tôi một dòng: muốn theo dõi tiến trình thì mở terminal
-thứ hai và chạy `tail -f .qa/$1/progress.log`.
+   > Section "Phản hồi review" đang rỗng nên checklist giữ nguyên. Ổn rồi thì chạy
+   > `/qa-write-cases $1`; còn muốn sửa thì ghi vào section đó rồi chạy lại lệnh này.
 
-Gọi agent `test-analyst` với:
+   Vẫn KHÔNG được hiểu rỗng thành "đã áp xong hết" hay tự báo là đã cập nhật —
+   checklist không đổi một chữ nào.
 
-```
-MODE: apply-feedback
-TICKET: $1
-FILE: .qa/$1/checklist_$1.md
-```
+## Áp phản hồi
 
-Sau khi agent kết thúc, báo bằng tiếng Việt:
-1. Đã áp những mục nào (theo số)
+Đọc section "Phản hồi review", áp từng mục vào **đúng số thứ tự** tương ứng.
+
+- **Giữ nguyên số đã gán.** Mục mới **append số tiếp theo ở cuối tài liệu**, tuyệt
+  đối không chèn số vào giữa — cột Note của file Excel trỏ theo số này, chèn giữa là
+  mọi tham chiếu cũ trỏ sai. Mục bị bỏ thì đánh `~~#11 (đã bỏ)~~`, giữ số, không tái
+  sử dụng.
+- **Câu hỏi mục F được trả lời** → không còn là giả định; ghi lại câu trả lời thật,
+  và đổi độ tin cho đúng. Ràng buộc số của field vẫn phải có căn cứ mới được lên
+  "Cao" (xem `skill: checklist-format`).
+- **Phản hồi trỏ số không tồn tại (VD `#99`), hoặc mơ hồ ("#4 sai" mà không nói sai
+  chỗ nào)** → **HỎI TÔI NGAY TẠI ĐÂY**, gộp mọi câu vào một lượt. Đừng tự sửa theo
+  phỏng đoán, và đừng bỏ qua lặng lẽ. Đây chính là lý do chặng này không dùng agent.
+- **Sau khi áp xong, CHUYỂN nội dung phản hồi đã xử lý xuống section
+  `## Đã xử lý (YYYY-MM-DD)`** ở cuối file — **KHÔNG xoá**. Đó là chữ của người dùng;
+  parse sai một lần mà đã xoá thì không lấy lại được, và cũng không truy được vì sao
+  checklist đổi. Section "Phản hồi review" để lại rỗng cho vòng sau.
+
+## Báo lại
+
+1. Đã áp những mục nào (theo số), mỗi mục một dòng ngắn nói đổi gì
 2. Câu hỏi mục F nào đã được trả lời, còn treo mấy câu độ tin **Thấp**
-3. Nếu còn câu hỏi Thấp chưa trả lời: nói rõ **chưa nên** viết test case, và liệt
-   kê đúng những câu cần hỏi khách/BA
-4. Khối tổng kết đầu vào: đã hỏi & xác nhận gì, còn treo gì
-5. Nếu đã sạch: mời chạy `/qa-write-cases $1`
+3. Còn câu hỏi Thấp chưa trả lời → nói rõ **chưa nên** viết test case, và liệt kê
+   đúng những câu cần hỏi khách/BA
+4. Đã sạch → mời chạy `/qa-write-cases $1`
 
-Nhắc lại một lần nếu người dùng vẫn muốn đi tiếp khi còn câu hỏi treo, rồi tôn
-trọng quyết định của họ.
+Nhắc lại một lần nếu tôi vẫn muốn đi tiếp khi còn câu hỏi treo, rồi tôn trọng quyết
+định của tôi.
+
+## Ranh giới
+
+- KHÔNG viết test case, KHÔNG tạo file Excel — đó là `/qa-write-cases`.
+- KHÔNG tự confirm thay người review.
+- KHÔNG xoá section "Phản hồi review" — chuyển xuống "Đã xử lý".
+
+## Ghi trạng thái (bắt buộc — để `/qa-status` và resume dùng được)
+
+**Ngay trước khi bắt đầu áp** (chặng này chạy thẳng, không gọi agent):
+```bash
+bash .claude/scripts/qa-state.sh set $1 apply-feedback in_progress "áp phản hồi"
+```
+
+**Ngay sau khi áp xong**, kể cả khi phải dừng vì phản hồi mơ hồ:
+```bash
+bash .claude/scripts/qa-state.sh set $1 apply-feedback done   "<tóm tắt 1 dòng: áp mấy mục, còn mấy câu Thấp>"
+bash .claude/scripts/qa-state.sh set $1 apply-feedback failed "<lý do dừng>"
+```
+
+Journal này là **nhật ký, không phải nguồn chân lý** — artifact trên đĩa mới là sự
+thật. Đừng bỏ bước ghi: bỏ là `/qa-status` mù, và lần chạy sau không biết tiếp từ đâu.

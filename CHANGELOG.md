@@ -1,5 +1,496 @@
 # Changelog — Telemax QA Harness
 
+## v3.5 — 2026-09-10
+
+Trạng thái xuyên chặng: resume được, và biết mình đang ở đâu.
+
+### Vấn đề
+
+`RESUME` thêm ở v3.1 **chỉ có trong `/qa-run`**, và nó suy trạng thái từ cột Result
+trong Excel. Không có gì biết trạng thái **xuyên chặng**: quay lại sau hai ngày thì
+không biết ticket nào đang dở, dở ở đâu, nên chạy lệnh gì tiếp. `progress.log` có
+sẵn nhưng là log append-only cho người đọc, không phải trạng thái máy đọc được.
+
+### `.qa/<ticket>/state.json` + `qa-state.sh`
+
+Mỗi ticket đã là một thư mục riêng từ trước; file trạng thái nằm trong đó.
+
+```bash
+bash .claude/scripts/qa-state.sh set  <ticket> <chặng> <trạng thái> ["ghi chú"]
+bash .claude/scripts/qa-state.sh get  <ticket>
+bash .claude/scripts/qa-state.sh list
+```
+
+Sáu chặng (`analyze` · `apply-feedback` · `write-cases` · `run` · `file-bugs` ·
+`verify-prod`) × bốn trạng thái (`in_progress` · `done` · `failed` · `skipped`).
+
+**Hai quyết định thiết kế, khác đề xuất ban đầu:**
+
+1. **Journal KHÔNG phải nguồn chân lý — artifact trên đĩa mới là.** `state.json` chỉ
+   ghi *đã từng chạy gì*; nó không chứng minh file còn tồn tại. Người dùng xoá tay
+   một `.xlsx` thì journal vẫn nói `done`. Nên `get`/`list` **luôn dò artifact thật**
+   và trả cả hai vế tách biệt, để `/qa-status` đối chiếu và **báo khi lệch**.
+2. **Command ghi, không phải agent.** Agent chết giữa chừng (hết session — chuyện
+   thường, chính `test-runner` có nguyên một mục xử lý nó) thì không kịp ghi gì.
+   Command vẫn sống sau khi agent kết thúc, nên nó ghi được cả trường hợp `failed`.
+
+Chi tiết khác: ghi **nguyên tử** (tmp + `os.replace`) nên đứt điện không để lại JSON
+cụt · `state.json` hỏng thì tự dựng lại chứ không chặn công việc · `in_progress` có
+`started_at` để `/qa-status` phát hiện chặng đứt · tham số sai bị từ chối kèm danh
+sách giá trị hợp lệ.
+
+`.qa/` đã gitignore → trạng thái **cục bộ theo máy**, không chia sẻ giữa người. Đúng
+cho working state; đừng dùng làm nơi báo cáo tiến độ cho team.
+
+### `/qa-status` — đọc-only
+
+```
+/qa-status              # mọi ticket, mới nhất lên đầu
+/qa-status TLM-2901     # chi tiết sáu chặng
+```
+
+Không ticket nào → nói thẳng **"chưa chạy ticket nào"**, không bịa bảng rỗng.
+Có ticket → bảng + **đúng MỘT việc nên làm tiếp**, không liệt kê sáu lựa chọn ngang
+hàng rồi để người dùng tự chọn.
+
+Ba thứ nó phải bắt được:
+
+- **Lệch journal ↔ artifact** — "nhật ký nói đã phân tích nhưng không thấy
+  `checklist_*.md`".
+- **Không có `state.json` KHÔNG nghĩa là chưa làm gì** — ticket chạy từ trước v3.5
+  vẫn suy được trạng thái từ artifact.
+- **`in_progress` quá lâu = đứt giữa chừng**, không phải đang chạy. Gợi ý chạy lại
+  đúng chặng đó, và nhắc `/qa-run` sẽ đề xuất `RESUME: có`.
+
+Điều kiện môi trường hỏng (không phải trạng thái ticket) → trỏ sang `/qa-doctor`.
+
+### Một lỗi tự gây, bắt được bằng test
+
+Bản đầu của `list` truyền dữ liệu qua stdin trong khi `python3 - <<'PY'` **đã dùng
+stdin để nạp chính script** — `sys.stdin.read()` trả rỗng và `list` luôn báo 0 ticket
+dù `.qa/` có đủ. Sửa bằng file tạm. Smoke test nhóm 12 có assert hồi quy cho đúng
+lỗi này.
+
+### Đã test
+
+`smoke-scripts.sh` nhóm 12 (9 assert, chạy trong sandbox riêng nên **không đụng
+`.qa/` thật**): list rỗng · list thấy đủ ticket · sắp mới nhất lên đầu · get đọc đúng
+chặng · `started_at` có mặt · dò được artifact thật · artifact thiếu thì báo thiếu ·
+`state.json` hỏng vẫn set được · chặng sai bị từ chối.
+
+Toàn bộ: `smoke-scripts.sh` (14 nhóm) · `lint-harness.py` (8 check) ·
+`check-gitignore.sh` · `tsc --noEmit` · `bash -n install.sh`.
+
+
+## v3.4 — 2026-09-10
+
+Đợt kiến trúc. Sửa một hàng rào **đang hỏng**, tách vai để test bám yêu cầu thay vì
+bám code, và bỏ một subagent không đáng có.
+
+### Phân tích tách đôi: spec ∥ code, rồi tổng hợp
+
+```
+spec-analyst  (chỉ spec, CẤM đọc code)  ─┐
+                                         ├─►  test-analyst  ─►  checklist
+code-analyst  (chỉ code + git diff)     ─┘     (tổng hợp)
+```
+
+**Vấn đề:** một agent đọc cả spec lẫn code rồi dựng checklist sẽ mô tả *code đang làm
+gì* thay vì *spec đòi gì*. Bug loại "code khác spec" trở nên **vô hình** — test được
+suy ra từ chính cái sai.
+
+- **`spec-analyst`** (mới) — ticket + Figma. **Ranh giới cứng: không `Read`/`Grep`
+  vào code, không đọc `CLAUDE.md` repo, không xem diff.** Gán mã AC ổn định.
+  Ràng buộc số mà spec không nói → độ tin luôn `Thấp` (nó không có căn cứ nào để lên
+  `Cao`, và đó là đúng).
+- **`code-analyst`** (mới) — code hiện tại + diff. Không đọc ticket/Figma. Chỉ mô tả
+  **hiện trạng**, không viết "cần test X". Mọi khẳng định phải dẫn `file:dòng` — đó
+  là thứ duy nhất cho phép nâng độ tin lên `Cao`.
+- **`test-analyst`** (đổi vai) — không đọc nguồn nữa, chỉ tổng hợp hai file. Nguyên
+  tắc: **spec là nguồn chính, code không bao giờ ghi đè spec.**
+
+Sản phẩm mới: **mục D6 "Spec ≠ code hiện tại"** trong `checklist-format`. Ba dạng —
+spec nói A code làm B (test theo **A**, nghi bug) · spec im lặng code có hành vi
+(chưa quyết, đưa câu hỏi vào F) · spec ngụ ý đã có mà code chưa có. Đây là thứ người
+review cần nhìn trước tiên.
+
+Hai agent đầu chạy **song song** (một cái cần ticket ID, cái kia cần ticket ID +
+nhánh base — không phụ thuộc nhau), nên wall-clock ≈ 2 chặng chứ không phải 3.
+
+### Duyệt lô bug: hàng rào hỏng → hàng rào thật
+
+`bug-filer` cũ bảo "**DỪNG xin duyệt** một lần, gộp cả danh sách. Chỉ tạo sau khi
+người dùng đồng ý rõ ràng" — trong một **subagent**, vốn không dừng chờ người được
+(README §"Vì sao chia command / agent / skill"). Hai kết cục đều xấu: agent tự duyệt
+cho mình (**mất hàng rào "con người bấm nút cuối"**), hoặc kết thúc chặng và người
+dùng chạy lại từ đầu.
+
+Tách đôi, điểm dừng rơi về **command** — nơi chờ người được:
+
+- **`bug-proposer`** (mới) — đọc Defects, dựng nội dung, đề xuất assignee, search
+  ClickUp chống trùng, ghi `.qa/<T>/bugs-proposed.json`, **kết thúc**. Không tạo gì.
+- **`/qa-file-bugs`** — trình bảng `TC ID · tiêu đề · priority · assignee · trùng?`,
+  xin duyệt **một lần cho cả lô**, cho phép bỏ dòng / đổi assignee / đổi priority.
+- **`bug-filer`** — chỉ thi hành `APPROVED_BUGS`. **Không tự thêm bug** ngoài danh
+  sách, kể cả khi đọc file thấy dòng hợp lệ khác.
+
+Chống trùng chạy trong agent nên kết quả `clickup_search` không đổ vào context chính.
+Tạo bug đứt giữa chừng → chạy lại an toàn, writeback khoá theo TC ID.
+
+### `/qa-apply-feedback` bỏ subagent
+
+Chặng này chỉ đọc một file `.md` local, sửa vài mục theo số, ghi lại — không MCP,
+không ticket, không Excel. Chạy thẳng trong session chính.
+
+Được thêm một thứ **đúng kiến trúc**: phản hồi mơ hồ (`#99` không tồn tại, "#4 sai"
+không nói sai chỗ nào) là **đúng lúc cần hỏi** — mà subagent thì không hỏi được, nó
+buộc phải kết thúc và người dùng chạy lại lệnh. Command hỏi ngay tại chỗ.
+
+`8.456 → 913 token` (−89%).
+
+### `/qa-doctor` — tách chẩn đoán khỏi cài đặt
+
+`/qa-run` từng bảo "chạy `/qa-setup` để dọn" khi thấy xung đột scope MCP — tức mở
+nguyên một command **cài đặt** để chẩn một lỗi. `/qa-doctor` là đọc-only: soát môi
+trường, cấu hình, ba bệnh hay gặp (trùng scope MCP · `.mcp.json` lệch qa-config ·
+rơi về `/login` mãi), **đề xuất lệnh sửa nhưng không tự chạy**.
+
+### `write_defects.py --mode cases`
+
+`load_testcases` **không đọc** cột 3 (Type), 6 (Precondition), 8 (Test Data) — mà
+`test-runner` cần cả ba: Type để phân ba nhánh, Precondition/Data để chạy Phase 1.
+`Read` tool không mở được `.xlsx`, nên agent phải tự chế script openpyxl tạm mỗi lần.
+
+Nay: `--mode cases [--round N] [--not-run-only]` trả từng case đầy đủ, cộng cờ
+`manual`/`data_req` và Result hai round. `--not-run-only` phục vụ `RESUME`.
+Smoke test nhóm 11 phủ nó, gồm cả assert rằng `--not-run-only` **lọc bớt** thật.
+
+### Số điểm dừng trong README: 3 → 5
+
+README khai "ba điểm dừng" từ đầu, nhưng thực tế có **năm**: sau checklist · sau khi
+áp phản hồi · sau file test case · sau sheet Defects · duyệt cả lô bug. Cái thứ năm
+trước v3.4 **không tồn tại trên thực tế** (xem trên). Đã sửa, kèm ghi chú rằng điểm
+duyệt lô bug phải nằm ở command chứ không trong agent.
+
+### Đánh đổi — nói thẳng
+
+| Chặng | Trước | Sau |
+|---|---|---|
+| `/qa-analyze` (3 chặng cộng lại) | 11.227 | **14.751** (+31%) |
+| `/qa-apply-feedback` | 8.456 | **913** (−89%) |
+| `/qa-file-bugs` (2 chặng cộng lại) | 5.021 | **7.115** (+42%) |
+| `/qa-run` (spec đã có) | 14.306 | 14.630 |
+| frontmatter nạp **mọi session** | 2.040 | **2.586** (+546) |
+
+`/qa-analyze` đắt hơn 31% là **chủ ý**: đổi token lấy test bám yêu cầu thay vì bám
+code, và lấy mục D6. `/qa-file-bugs` đắt hơn 42% để có một hàng rào duyệt thật thay
+vì một hàng rào chỉ tồn tại trên giấy. Frontmatter tăng vì có thêm 3 agent + 1
+command — khoản này trả ở **mọi** session, đáng theo dõi.
+
+### Đã test
+
+`smoke-scripts.sh` (14 nhóm) · `lint-harness.py` (8 check) · `check-gitignore.sh` ·
+`bash -n install.sh` · `tsc --noEmit`.
+
+### Chưa làm — cố ý
+
+**Điểm dừng #2 (sau apply-feedback) thành có điều kiện.** Đây là thay đổi duy nhất
+trong toàn bộ backlog có thể **làm giảm chất lượng đầu ra**, và `evals/results/` vẫn
+rỗng. Chạy nó mù là trái đúng nguyên tắc harness tự đặt: *"không có baseline thì mọi
+cải thiện chỉ là cảm giác"*. Chờ lượt chạy thật đầu tiên làm baseline.
+
+**Guard `auth.setup.ts` khi `storageState` còn hạn.** `dependencies: ['setup']` khiến
+mỗi lần `npx playwright test` đều đăng nhập lại (SPA nguội >30s), và một `/qa-run`
+gọi ít nhất hai lần. Cắt được, nhưng có rủi ro dùng session cũ — cần đo trước.
+
+
+## v3.3 — 2026-09-10
+
+Đợt tối ưu quy trình. Hai bản review độc lập của agent + một lượt kiểm chéo; phần
+dưới là những gì **đã kiểm chứng bằng file thật hoặc thực nghiệm** rồi mới sửa.
+
+### Một đề xuất bị BÁC BỎ khi review
+
+Cả kế hoạch ban đầu có mục "precheck session code (`playwright/.auth/user.json`) ở
+cổng `/qa-run`", với lý do session hết hạn chỉ lộ ra sau khi cả lô spec đã fail.
+
+**Tiền đề sai.** Project `chromium` khai `dependencies: ['setup']`, nên Playwright
+chạy `auth.setup.ts` **trước mỗi lần** `npx playwright test` — `user.json` luôn vừa
+được ghi mới. Nghi ngờ duy nhất còn lại là bộ lọc file có loại project dependency
+không; đã kiểm bằng `--list` trên ba cách gọi:
+
+```
+--project=chromium                          -> [setup] có mặt
+--project=chromium tests/TLM-0000.spec.ts   -> [setup] có mặt
+--project=chromium tests/... -g "TC-A-001"  -> [setup] có mặt
+```
+
+Không thêm precheck. Thay vào đó **sửa phần chẩn đoán sai** ở `test-runner`: mục
+"spec đồng loạt fail vì hết session" trước đây quy nguyên nhân cho `user.json` hết
+hạn — điều không xảy ra được. Nay là bảng ba dấu hiệu: `[setup]` đỏ (đăng nhập hỏng
+— chạy `npm run check` để biết là selector hay credential) · `[setup]` xanh mà case
+vẫn về login (app không nhận session — **nêu cho dev**) · vài case lẻ (có thể là bug
+thật).
+
+### Hai lỗi thật
+
+**Sai thứ tự `recalc`.** `test-runner` chạy `recalc.py` ở bước 3, rồi bước 4 chạy
+`write_defects.py --mode fill` — hàm đó `load_workbook` + `wb.save()`, mà openpyxl
+**xoá cache công thức mỗi lần save**. Recalc tính xong rồi bị xoá sạch. Hậu quả:
+người dùng mở file ở điểm review thấy **Summary trống** và tưởng là thiếu
+LibreOffice. Header của chính `recalc.py` đã ghi "chạy sau MỌI lần `write_defects.py`
+ghi file". Nay recalc **một lần, ở cuối bước 4**; bảng log đổi theo.
+
+**Upload Drive không bao giờ chạy khi ticket sạch.** `bug-filer` bước 1: "danh sách
+rỗng → báo và kết thúc", trong khi upload là bước 6 — và đó là chỗ **duy nhất** trong
+harness đưa file test case lên Drive. Ticket chạy sạch, đúng cái đáng chia sẻ nhất,
+lại là ticket không bao giờ được upload. Nay danh sách rỗng → nhảy thẳng bước 6.
+
+### Bỏ việc lặp và lượt chờ người thừa
+
+- **`PRECHECKS_OK` cho `/qa-verify-prod`** — `prod-verifier` bước 1 đang kiểm lại
+  nguyên vẹn cả 4 cổng của command (gồm một `--list` khởi động Playwright và một
+  `git fetch`). Đúng khuôn `MCP_OK`/`SESSION_OK` mà v3.1 dựng cho `/qa-run`, chỉ là
+  chưa áp cho chặng này. Cổng của command nay kiểm thêm `Trạng thái` = `KHÔNG DÙNG`.
+- **`/qa-login` bước 3b chỉ hỏi khi 2FA BẬT.** 2FA đang tắt thì session code tự tạo
+  qua `dependencies: ['setup']` — hỏi ở đây là một lượt chờ người **và** một lần
+  đăng nhập headed >30s hoàn toàn thừa.
+- **`bug-filer` bước 6 quyết theo `DRIVE_FOLDER`, không "hỏi rồi đợi".** Subagent
+  không chờ người được (README §"Vì sao chia command / agent / skill"). Folder có
+  giá trị = đã đồng ý ở cổng 4; ghi `hỏi lại sau` = không upload. Command nay hỏi
+  folder **ngay cả khi chưa biết có bug nào**.
+- **`test-analyst` đọc nguồn song song.** ClickUp ⟂ git diff hoàn toàn (cả hai chỉ
+  cần TICKET + BASE_BRANCH, có sẵn trong khối đầu vào); chỉ Figma phụ thuộc ticket.
+  Bảng log 6 bước → 4, bước 1 và 2 phát tool call cùng lúc.
+- **Gỡ trùng vòng đời trình duyệt.** Năm dòng tri thức vận hành Phase 1 trong
+  `qa-config.md` (vòng đời một-phiên · ba mức reset · chờ tín hiệu dương · hết session
+  giữa chặng · thứ tự chạy) đã có đủ ở `agents/reference/phase1-browser.md`, mà
+  `qa-config` thì **mọi chặng đều đọc** còn reference chỉ nạp khi có Phase 1. Gộp
+  còn một con trỏ.
+
+### Đánh đổi — nói thẳng
+
+Đợt này **tăng token 250–620/chặng**, không giảm:
+
+| Chặng | v3.1 | v3.3 |
+|---|---|---|
+| `/qa-analyze` | 10.977 | 11.227 |
+| `/qa-run` (spec đã có) | 13.786 | 14.306 |
+| `/qa-run` (+ Phase 1) | 19.102 | 19.726 |
+| `/qa-file-bugs` | 4.746 | 5.021 |
+| `/qa-verify-prod` | 3.564 | 3.904 |
+
+Đây là đợt **sửa lỗi và wall-clock**, không phải đợt token. Đổi lại: hai lỗi thật
+được vá, bỏ một lần khởi động LibreOffice (10–20s nguội), bỏ một `--list` +
+`git fetch` ở chặng prod, bỏ một lượt chờ người + một lần đăng nhập headed >30s ở
+`/qa-login`, và 2–3 vòng tool tuần tự ở `/qa-analyze`. Một lượt chờ người đáng giá
+hơn 600 token rất nhiều.
+
+### Chưa làm — chờ quyết định
+
+Đợt 2 (đổi hợp đồng người-máy) chưa động tới: tách `bug-filer` thành `propose`/`create`
+để hàng rào duyệt lô bug thành thật (hiện `bug-filer` bảo "DỪNG xin duyệt" trong một
+subagent vốn không dừng chờ được) · bỏ subagent cho `/qa-apply-feedback` · tách
+`/qa-doctor` · sửa README con số "ba điểm dừng" (thực tế năm).
+
+Đợt 3: `write_defects.py --mode cases` — `load_testcases` hiện **không đọc** cột 3
+(Type), 6 (Precondition), 8 (Test Data), nên `test-runner` phải tự viết openpyxl tạm.
+
+Đợt 4 (chờ baseline `evals/`): điểm dừng #2 có điều kiện.
+
+Phát hiện mới, chưa xếp lịch: `dependencies: ['setup']` nghĩa là **mỗi** lần gọi
+`npx playwright test` đều đăng nhập lại từ đầu (SPA tải nguội >30s), và một chặng
+`/qa-run` gọi ít nhất hai lần. Chặn lại được bằng cách guard `auth.setup.ts` khi
+`storageState` còn hạn — nhưng có rủi ro session cũ, cần đo trước.
+
+### Đã test
+
+`smoke-scripts.sh` (12 nhóm) · `lint-harness.py` (8 check — bắt được 2 vi phạm
+`--project` do chính đợt này tạo ra) · `check-gitignore.sh` · `tsc --noEmit` ·
+`playwright test --list` (10 test / 4 file).
+
+
+## v3.2 — 2026-09-10
+
+Project e2e không còn được copy mù sang repo đích.
+
+### Vấn đề
+
+`install.sh` bê nguyên `telemax-e2e/` sang mọi repo. Project đó gắn chặt vào app
+Telemax: URL `dashboard-stage.telemax.com.au`, selector form login
+(`getByPlaceholder('Enter your email')`), biến `TELEMAX_USER/PASS`, fixture biển số
+xe và IMEI, và cách gõ `pressSequentially` để lách Blazor `EditContext`. Cài vào một
+repo khác thì **mọi selector đều sai**, `npm run check` đỏ từ phút đầu, và người mới
+cài không có cách nào biết vì sao.
+
+Tệ hơn là nhánh ngược lại: repo đích **đã có** Playwright thì bản cũ chỉ in
+`telemax-e2e/ ĐÃ CÓ — không đụng` rồi đi tiếp — để lại một repo có Playwright nhưng
+**không có hàng rào nào của harness**, gồm cả `grep: /@prod-safe/`.
+
+### Thay đổi
+
+- **`install.sh` không copy project e2e nữa** (mặc định). `--with-e2e` để copy nguyên
+  bản Telemax — chỉ đúng khi repo đích là app Telemax cùng form đăng nhập.
+- **Skill mới `e2e-scaffold`** — dò hiện trạng repo rồi đi một trong ba nhánh:
+
+  | Dò thấy | Nhánh | Làm gì |
+  |---|---|---|
+  | Đã có `playwright.config.*` | **A** | **Vá** config sẵn có cho đủ 4 hàng rào, đưa diff cho người dùng duyệt. Không ghi đè — config đó có thể đang chạy CI |
+  | Chưa có, là app web | **B** | Scaffold từ khuôn, điền phần app-specific (thư mục, URL, tiền tố biến môi trường, selector login) |
+  | Không phải app web / dùng framework khác | **C** | `qa-config` ghi `Trạng thái: KHÔNG DÙNG`; nhánh UI bị skip, **không chặn** `/qa-run` |
+
+- **`/qa-setup` mục 2d** — phần hỏi nằm ở command, đúng tầng: command chờ người dùng
+  được, agent thì không.
+- **`qa-config.md` mục Playwright có `Trạng thái`** (`CÓ` / `CHƯA CÓ` / `KHÔNG DÙNG`),
+  cùng quy ước với mục Postman đã có sẵn.
+- **`test-runner` nhánh UI xử `KHÔNG DÙNG` như nhánh API xử Postman `CHƯA CÓ`**: case
+  UI ghi `Blocked` + `[MANUAL] không dùng project e2e — chạy tay`, chặng vẫn chạy tiếp.
+  Trước đây thiếu project là **DỪNG cả chặng**, kể cả khi ticket còn nhánh API chạy được.
+- **`prod-verifier`** dừng sớm với lý do rõ khi `KHÔNG DÙNG`, thay vì báo xanh trên
+  một bộ spec không tồn tại.
+- **`lint-harness.py` check #8** — khuôn e2e phải giữ đủ 4 hàng rào: `grep: /@prod-safe/`,
+  hai `storageState` tách biệt, project staging có tên, artifact bật. Check chỉ soi
+  **code, bỏ qua comment** — bản đầu tính cả comment nên gỡ hàng rào thật vẫn xanh,
+  phát hiện bằng phép thử phá hoại.
+
+### Ranh giới đã ghi rõ, tránh kỳ vọng sai
+
+Harness **chỉ chạy được với Playwright** — `playwright-export` sinh spec `.ts`,
+`test-runner`/`prod-verifier` gọi `npx playwright test`, `.mcp.json` dùng
+`@playwright/mcp`, hàng rào `@prod-safe` sống trong `playwright.config.ts`. Repo đích
+dùng Cypress/Selenium/pytest thì **không scaffold sang framework đó** — đó là viết lại
+ba skill. Khi ấy chọn nhánh C, hoặc dựng Playwright song song bộ sẵn có.
+
+**Ngôn ngữ backend của repo không quyết định gì.** Playwright lái trình duyệt; app
+đằng sau là .NET, Go hay Rails đều như nhau. Thứ thật sự khác giữa các repo là: đã có
+e2e chưa · form login trông thế nào · có phải app web không.
+
+### Đã test
+
+`install.sh` vào repo git trống: mặc định ra `.claude/ .gitignore .mcp.json`, không
+có project e2e; `--with-e2e` ra thêm `telemax-e2e/`. Skill `e2e-scaffold` có mặt ở
+repo đích. Phép thử phá hoại trên cả 4 hàng rào của khuôn — lint bắt được cả 4.
+
+
+## v3.1 — 2026-09-10
+
+Đợt hiệu quả. Ba bản review độc lập (một chính + hai agent) cùng soi harness; mục
+dưới là phần đã hợp nhất và thực thi. **Không hàng rào an toàn nào bị gỡ.**
+
+### An toàn — `playwright test` trần chạy cả project `prod`
+
+Nặng nhất trong đợt này. Không truyền `--project` thì Playwright chạy **mọi** project
+khớp, và project `prod` có `testDir: './tests'` không kèm `testIgnore`. Nghĩa là mỗi
+`/qa-run` trên staging còn kéo theo `setup-prod` (**đăng nhập production**) rồi chạy
+lại toàn bộ case `@prod-safe` trên đó — mỗi TC ID ra hai dòng kết quả cho agent đọc,
+và thiếu `PROD_BASE_URL` thì cả lô đỏ, đúng kịch bản "lô bug ma".
+
+- Thêm `--project=chromium` vào 24 lệnh chạy staging trong `.claude/`, `docs/`,
+  `telemax-e2e/README.md`, và ba script `npm run test*`.
+- `lint-harness.py` kiểm số 7: mọi `playwright test` phải có `--project`. Lỗi này
+  không quay lại được nữa.
+
+### Mâu thuẫn "255" — hàng rào bị vô hiệu ngay tại gốc
+
+`checklist-format` dạy gán maxlength=255 độ tin **Cao, dùng luôn**; ba chỗ khác
+(`common-validate`, `testcase-writer`, cổng `/qa-write-cases`) cấm tuyệt đối. Vì cổng
+chỉ chặn khi *không có giả định Cao ở F*, nhãn "Cao" mở cửa sau cho đúng thứ nó chặn.
+
+Mục F giờ: ràng buộc **số** của field mà spec không nói **luôn là Thấp**; "Cao" phải
+dẫn được căn cứ đọc được. Cổng và `testcase-writer` không nhận nhãn "Cao" trơn nữa.
+
+### Wall-clock
+
+- **`git fetch` trước mọi `git log --grep`** (`/qa-run`, `/qa-verify-prod`,
+  `prod-verifier`, `git-diff-scope`). `origin/stage` cũ = chặn oan sau khi dev vừa merge.
+- **`/qa-run` cổng 6 seed TRƯỚC, không probe bằng MCP.** Gọi tool MCP là chiếm
+  `SingletonLock`, tự khoá đường của script seed, và lối ra duy nhất là bắt người dùng
+  thoát Claude Code. Giờ kiểm lock trước: `FREE` → chạy thẳng `seed-mcp-profile.mjs`
+  (đã idempotent, `ALREADY_LOGGED_IN` thì thoát ngay). **Bỏ hẳn một lần restart session.**
+- **RESUME.** `test-runner` bước 0a bỏ qua TC ID đã có `Pass`/`Fail` ở round đích.
+  Session hết hạn giữa chặng là chuyện thường; trước đây mỗi lần đứt là mất toàn bộ
+  công đã chạy dù kết quả đang nằm sẵn trong Excel.
+- **Phase 3 verify gộp một lệnh** cho cả file thay vì `-g` từng case. 20 case export
+  = 20 lần khởi động Playwright, vài phút thuần chờ.
+- **Log từng case chỉ ở Phase 1.** Nhánh 2a-1 đã có `tee` đổ từng case vào
+  `progress.log`; log tay thêm là trùng hoàn toàn. Giá thật đo lại: ~99 token/case kèm
+  wrapper, không phải 1.800 cho cả bộ 45.
+
+### Vòng lặp người
+
+- **`/qa-apply-feedback` không chặn khi section rỗng** — nói một lượt rồi kết thúc.
+  `/qa-analyze` mời có điều kiện: không sửa gì thì đi thẳng `/qa-write-cases`.
+- **`write_defects.py --mode status`** (đọc-only): phân bố Round, `suggest_round`,
+  `data_req`/`manual` gom theo điều kiện, `ac_missing`. Cổng 2–4 của `/qa-run` trước
+  đây đòi những số này mà không script nào cung cấp — nên trên thực tế phải viết
+  openpyxl tạm mỗi lần, hoặc bị bỏ qua. Smoke test nhóm 10 phủ nó.
+- **Cổng Figma chuyển từ command xuống `test-analyst`.** Command không đọc ticket nên
+  hỏi "ticket có Figma không" là hỏi mù, hoặc phải đọc ticket hai lần.
+
+### Token
+
+Đo bằng tokenizer thật, không ước theo ký tự:
+
+| Chặng | Trước | Sau |
+|---|---|---|
+| `/qa-analyze` | 13.108 | **10.977** (−16%) |
+| `/qa-write-cases` | 13.310 | **10.452** (−21%) |
+| `/qa-run` — spec đã có | 18.181 | **13.786** (−24%) |
+| `/qa-run` — còn Phase 1 | 18.181 | 19.102 (+5%) |
+| `/qa-file-bugs` | 7.588 | **4.746** (−37%) |
+| `/qa-verify-prod` | 6.022 | **3.564** (−41%) |
+
+- **`qa-config.sh <mục>`** — in đúng một mục thay vì `cat` cả file. Giữ **một** file
+  (không tách năm) để không mở đường cho hai bản trôi lệch.
+- **`docs/DEAD-ENDS.md`** — biên bản ba ngõ cụt chuyển khỏi `qa-config.md`; ở đó chỉ
+  còn câu mệnh lệnh + link.
+- **`agents/reference/phase1-browser.md`** — vòng đời một-phiên, ba mức reset, xử lý
+  bị đẩy về login. ~2.000 token chỉ nhánh 2a-2 cần; round 2 trở đi không nạp nữa.
+- **`MCP_OK` / `SESSION_OK`** trong khối đầu vào — agent không kiểm lại thứ command
+  vừa kiểm.
+
+`/qa-run` có Phase 1 tăng 5% vì phần thêm vào (RESUME, `--mode status`, luồng
+SingletonLock). Đổi lấy một lần restart session và vài chục phút chạy lại — đáng.
+
+### Bảng ngân sách token trong README
+
+Bảng cũ thấp hơn thực tế **30–77%**: bỏ sót `qa-config.md` (bị đọc ở mọi chặng), bỏ
+sót reference bắt buộc, và dùng hệ số 3,5 ký tự/token trong khi đo thật ra **3,22**.
+Đã viết lại theo tokenizer, thêm dòng `/qa-apply-feedback`.
+
+Hai quy tắc được sửa, không chỉ cập nhật số:
+
+1. Bổ sung vế thiếu: trùng lặp giữa **command và agent nó gọi** — hoặc giữa hai thứ
+   đó với `qa-config.md` — **không** miễn phí, vì chúng cùng một chặng.
+2. Viết lại quy tắc `reference/`: chỉ tách khi chi tiết được đọc **có điều kiện**.
+   Chi tiết dùng ở mọi lần chạy mà tách ra thì chỉ thêm một lượt Read, không bớt
+   token nào — nên mục A–H của `checklist-format` **giữ nguyên trong SKILL.md**.
+
+### Đã cân nhắc và KHÔNG làm
+
+- **Dịch harness sang tiếng Anh.** Đo trên cặp câu dịch đối chiếu: chỉ rẻ hơn ~11%,
+  có câu còn đắt hơn. Không bù được rủi ro trôi nghĩa ở các hàng rào đã trả giá.
+- **Gom khối "Cổng đầu vào — Ba mức" (×6 command) vào file dùng chung.** Sáu command
+  không bao giờ cùng nạp — trùng lặp này đang miễn phí theo đúng quy tắc 1.
+- **Tách `checklist-format` / `playwright-export` ra `reference/`.** Xem quy tắc 2 đã
+  sửa ở trên.
+- **Cắt các mục `Tự kiểm`.** Chúng là hàng rào chất lượng, dùng ở mọi lần chạy.
+
+### Còn treo — cần chạy thật mới quyết được
+
+- **Baseline tầng 2 vẫn chưa có** (`evals/results/` rỗng). Mọi số ở trên là token và
+  wall-clock, **không** phải chất lượng đầu ra. Chạy 5 kịch bản `evals/` trên một
+  ticket thật trước khi tinh chỉnh thêm.
+- **Chi phí ảnh Phase 1** chưa đo được (cần transcript thật). Nếu lớn như dự đoán thì
+  bật `--image-responses omit` và `Read` lại ảnh của case Fail — ảnh vẫn được lưu, chỉ
+  case Fail mới tốn context.
+- **`test-runner` đang chạy `sonnet`** dù nó mang phán đoán rủi ro nhất (phân biệt
+  *bug thật* với *spec mục rữa*), trong khi `testcase-writer` chạy `opus`. Chạy
+  `evals/03` ở cả hai model rồi mới đổi.
+- **Cache locator theo màn hình ở Phase 1** — 8 case cùng màn hình đang snapshot 8
+  lần. Cần đo DOM có thật sự ổn định giữa các case không.
+
+
 ## v3.0 — 2026-09-02
 
 Tái cấu trúc thành **repo GitHub độc lập**. Không đổi hành vi harness; đổi cách phân phối.

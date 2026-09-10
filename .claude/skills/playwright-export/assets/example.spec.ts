@@ -8,11 +8,11 @@ import { test, expect } from '@playwright/test';
  * MỘT FILE CHO MỘT TICKET: tên file là mã ticket (tests/TLM-2899.spec.ts), chứa toàn
  * bộ case UI của ticket kể cả khi đụng nhiều màn hình (thêm describe, không thêm file).
  * Chạy từ trong thư mục telemax-e2e:
- *   npx playwright test tests/TLM-2899.spec.ts                 # cả ticket
- *   npx playwright test tests/TLM-2899.spec.ts -g "TC-A-001"   # một case
+ *   npx playwright test --project=chromium tests/TLM-2899.spec.ts                 # cả ticket
+ *   npx playwright test --project=chromium tests/TLM-2899.spec.ts -g "TC-A-001"   # một case
  *
  * Tên describe đặt theo màn hình và giữ nhất quán giữa các ticket, để chạy regression
- * theo màn hình xuyên ticket: npx playwright test -g "Vehicle Detail"
+ * theo màn hình xuyên ticket: npx playwright test --project=chromium -g "Vehicle Detail"
  * Session login được tái dùng qua storageState (cấu hình ở playwright.config.ts,
  * project 'chromium' -> dependencies ['setup']). KHÔNG login trong file này.
  */

@@ -64,6 +64,15 @@ bash .claude/scripts/qa-log.sh <TICKET> qa-verify-prod <bước>/4 "<đang làm 
 
 ### 1. Kiểm điều kiện
 
+**Khối đầu vào có `PRECHECKS_OK` với giá trị thật → BỎ QUA cả mục này**, đi thẳng
+bước 2. Command đã kiểm đủ bốn thứ dưới ở cổng 1–5, trong đó `--list` là một lần
+khởi động Playwright — chạy lại là trả tiền hai lần cho cùng một câu trả lời. Chỉ
+chạy mục này khi field ghi `?` hoặc để trống.
+
+
+- Mục Playwright `Trạng thái` (`bash .claude/scripts/qa-config.sh playwright`) là
+  `KHÔNG DÙNG` → **DỪNG**: repo không dùng project e2e nên không có spec để verify.
+  Báo người dùng verify tay, đừng báo xanh.
 - `tests/TLM-XXXX.spec.ts` tồn tại? Không → DỪNG, báo: ticket chưa có spec, chạy
   `/qa-run` trên staging trước.
 - Đếm số case gắn `@prod-safe` trong file đó:
@@ -80,6 +89,7 @@ bash .claude/scripts/qa-log.sh <TICKET> qa-verify-prod <bước>/4 "<đang làm 
   spec đã có, không dùng MCP. Không nhận credential hay mã 2FA qua chat.
 - **Code của ticket đã lên `master` chưa** (production build từ `master`):
   ```bash
+  git fetch origin master --quiet
   git log --oneline origin/master --grep="TLM-XXXX" | head
   ```
   Không thấy → DỪNG. Verify khi code chưa lên production là đo bản cũ rồi báo xanh.

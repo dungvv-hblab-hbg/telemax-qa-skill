@@ -18,8 +18,10 @@ rõ mặc định đề xuất. Không bao giờ hỏi mật khẩu/token qua ch
 1. Checklist còn phản hồi chưa xử lý, hoặc mục F còn câu hỏi độ tin **Thấp** chưa
    có trả lời → dừng, liệt kê đúng những câu đó, hỏi tôi.
 2. Có field nào cần ràng buộc thật (maxlength, min/max, định dạng) mà **không có ở
-   D1 và cũng không có giả định độ tin Cao ở F** → hỏi tôi. **Tuyệt đối không lấy
-   255 hay bất kỳ số "chuẩn" nào làm thật.**
+   D1**, và ở F cũng **không có giả định độ tin Cao KÈM căn cứ đọc được** (schema
+   DB, code validator, field tương tự — nêu rõ chỗ đọc) → hỏi tôi. Nhãn "Cao" trơn,
+   không dẫn được căn cứ, **không tính**. **Tuyệt đối không lấy 255 hay bất kỳ số
+   "chuẩn" nào làm thật.**
 3. Có Expected Result nào cần message mà **không có trong D2** → hỏi, đừng tự viết
    câu chung chung.
 
@@ -59,3 +61,20 @@ Sau khi agent kết thúc, báo bằng tiếng Việt:
    lại `/qa-write-cases $1`; ổn rồi thì chạy `/qa-run $1`
 
 Đừng tự chạy test.
+
+## Ghi trạng thái (bắt buộc — để `/qa-status` và resume dùng được)
+
+**Ngay trước khi gọi agent:**
+```bash
+bash .claude/scripts/qa-state.sh set $1 write-cases in_progress "sinh test case"
+```
+
+**Ngay sau khi agent kết thúc**, kể cả khi hỏng — command vẫn sống sau agent, nên
+đây là chỗ duy nhất ghi được cả trường hợp thất bại:
+```bash
+bash .claude/scripts/qa-state.sh set $1 write-cases done   "<tóm tắt 1 dòng: bao nhiêu case, độ phủ AC>"
+bash .claude/scripts/qa-state.sh set $1 write-cases failed "<lý do dừng>"
+```
+
+Journal này là **nhật ký, không phải nguồn chân lý** — artifact trên đĩa mới là sự
+thật. Đừng bỏ bước ghi: bỏ là `/qa-status` mù, và lần chạy sau không biết tiếp từ đâu.

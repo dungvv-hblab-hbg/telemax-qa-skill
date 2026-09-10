@@ -67,7 +67,9 @@ Test case phải theo câu trả lời thật, KHÔNG theo giả định treo.
 
 **Ràng buộc và message phải có nguồn.** Trước khi viết, đối chiếu từng field/message
 sẽ dùng:
-- Ràng buộc có ở **D1**, hoặc có giả định độ tin **Cao đã qua review** ở F → dùng.
+- Ràng buộc có ở **D1**, hoặc có giả định độ tin **Cao đã qua review VÀ dẫn được
+  căn cứ** (schema DB / code validator / field tương tự) ở F → dùng. Nhãn "Cao"
+  không kèm căn cứ thì coi như chưa có — hỏi.
 - Message có ở **D2** → trích nguyên văn.
 - Không có ở đâu cả → **DỪNG, hỏi**. Tuyệt đối không lấy 255, "an error is
   displayed", hay bất kỳ giá trị "chuẩn" nào làm thật. Đây là chỗ sai âm thầm nhất:

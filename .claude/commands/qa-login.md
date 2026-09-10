@@ -67,14 +67,24 @@ Chờ 2FA: sau khi tôi gõ `ok`, xem script đã in hai dòng đó chưa. Chưa
 Script kết thúc bằng `ctx.close()` để **nhả lock**, nếu không MCP sẽ không mở được
 profile. Không thấy `PROFILE_SEEDED` thì đừng chạy `/qa-run` — MCP sẽ vấp lock.
 
-**3b. Hỏi tôi có làm luôn session cho phần chạy bằng code không**
+**3b. Session cho phần chạy bằng code — CHỈ hỏi khi 2FA đang bật**
 
 Harness có **hai session tách biệt**: session của MCP (vừa đăng nhập xong, dùng cho
 Phase 1) và session của project e2e (`telemax-e2e/playwright/.auth/user.json`, dùng khi
-chạy `npx playwright test`).
+chạy `npx playwright test --project=chromium`).
 
-Nếu session thứ hai chưa có hoặc đã hết hạn, hỏi tôi có muốn làm luôn trong lần này
-không — đằng nào tôi cũng đang ngồi đây với mã 2FA trong tay:
+**2FA đang TẮT (mặc định hiện nay) → ĐỪNG HỎI GÌ.** Project `chromium` khai
+`dependencies: ['setup']`, nên Playwright tự chạy `auth.setup.ts` **trước mỗi lần**
+`npx playwright test --project=chromium` — kể cả khi lọc theo đường dẫn file hay `-g` (đã kiểm bằng
+`--list`: project `[setup]` vẫn có mặt trong cả ba cách gọi). Session code tự tạo,
+tự làm mới, miễn `.env` có credential. Hỏi tôi ở đây là **một lượt chờ người và một
+lần đăng nhập headed >30s hoàn toàn thừa**.
+
+Chỉ nói một dòng cho tôi biết: *"session code sẽ tự tạo ở lần chạy spec đầu tiên."*
+
+**2FA đang BẬT → mới hỏi.** Khi đó `auth.setup.ts` tự chạy sẽ treo ở màn nhập mã
+(headless thì hết `LOGIN_WAIT` rồi báo lỗi). Đằng nào tôi cũng đang ngồi đây với mã
+trong tay, nên làm luôn là hợp lý:
 
 ```bash
 cd telemax-e2e && npm run auth:headed

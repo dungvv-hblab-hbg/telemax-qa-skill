@@ -4,9 +4,9 @@
   "private": true,
   "description": "E2E tests cho Telemax fleet dashboard. Spec gom một file cho một ticket.",
   "scripts": {
-    "test": "playwright test",
-    "test:headed": "playwright test --headed",
-    "test:ui": "playwright test --ui",
+    "test": "playwright test --project=chromium",
+    "test:headed": "playwright test --project=chromium --headed",
+    "test:ui": "playwright test --project=chromium --ui",
     "check": "playwright test --project=check",
     "test:prod": "playwright test --project=prod",
     "auth": "playwright test --project=setup",

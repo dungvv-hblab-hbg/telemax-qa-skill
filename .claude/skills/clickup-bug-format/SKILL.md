@@ -15,7 +15,7 @@ Khuôn để mọi bug từ harness lên ClickUp đồng nhất, đủ thông ti
 không phải hỏi lại. Skill là phần TĨNH (bug trông thế nào); agent lo phần ĐỘNG (tạo
 bug qua MCP sau khi người dùng duyệt).
 
-Xem [../../qa-config.md](../../qa-config.md) cho list/space đích, tag, priority map,
+Chạy `bash .claude/scripts/qa-config.sh clickup` cho list/space đích, tag, priority map,
 status ban đầu và rule assign. Giá trị nào còn `CHƯA ĐIỀN` là điều kiện chưa thoả:
 DỪNG và hỏi người dùng, không đoán.
 
@@ -119,8 +119,9 @@ retest `--mode read`/`fill` tự bỏ qua dòng đã có Ticket ID nên không t
 
 ## Ranh giới
 
-- Skill chỉ định KHUÔN; KHÔNG tự tạo bug. Agent tạo qua ClickUp MCP, chỉ sau khi
-  người dùng đã duyệt danh sách bug + assignee.
+- Skill chỉ định KHUÔN; KHÔNG tự tạo bug. `bug-proposer` dùng khuôn này để **đề
+  xuất**; `bug-filer` mới tạo qua ClickUp MCP, và chỉ sau khi người dùng đã duyệt cả
+  lô ở command.
 - KHÔNG tạo bug cho dòng đã có Bug ID, đã có Fix Status, hoặc case `[MANUAL]`.
 - KHÔNG đính data khách/nhạy cảm nguyên văn vào bug.
 
