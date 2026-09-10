@@ -148,6 +148,27 @@ Diễn giải lại chứ không chép nguyên văn — chép thì không chứn
 `# · Nội dung mâu thuẫn · Chỗ A nói gì (ở đâu) · Chỗ B nói gì (ở đâu) · Đang tạm theo bên nào`
 BẮT BUỘC ghi rõ vị trí đọc được của cả hai bên, không chỉ nói "spec mâu thuẫn".
 
+**D6. Spec ≠ code hiện tại**  *(bắt buộc khi có cả phân tích spec lẫn phân tích code)*
+`# · Spec đòi gì (nguồn) · Code đang làm gì (file:dòng) · Nghi là gì · Test theo bên nào`
+
+Mục này là **sản phẩm của việc tách `spec-analyst` và `code-analyst`**. Nó tồn tại vì
+một checklist dựng từ code sẽ mô tả *code đang làm gì* thay vì *spec đòi gì* — và khi
+đó bug loại "code khác spec" trở nên vô hình, vì test được suy ra từ chính cái sai.
+
+Ba dạng ghi vào đây:
+
+| Dạng | Nghi là gì | Test theo bên nào |
+|---|---|---|
+| Spec nói A, code làm B | bug đã tồn tại, **hoặc** spec đã đổi mà code chưa theo | **A (spec)** |
+| Spec im lặng, code có hành vi | hành vi ngầm cần giữ, **hoặc** code thừa | chưa quyết — đưa câu hỏi vào F |
+| Spec ngụ ý đã có, code chưa có gì | spec hiểu nhầm hiện trạng | A (spec), ghi rõ là làm mới |
+
+**Code KHÔNG BAO GIỜ ghi đè spec.** Cột cuối gần như luôn là "spec"; ngoại lệ phải
+kèm lý do đọc được, không phải "code làm thế thì chắc đúng thế".
+
+Không có phân tích code (code chưa xong, ticket không đụng code) → **bỏ hẳn mục này**,
+đừng để trống.
+
 ### E. Bảng có điều kiện  *(bắt buộc khi đủ điều kiện — không phải tùy chọn)*
 
 **Role × quyền** — bắt buộc khi tính năng có từ **2 vai trò trở lên**.
@@ -176,14 +197,24 @@ phương án tốt nhất** kèm lý do, để người dùng có thể mang đi
 tự tin thì dùng luôn khỏi cần confirm. Cột **Độ tự tin** cho người dùng biết cái
 nào xài được ngay, cái nào bắt buộc phải hỏi:
 
-- **Cao** — đề xuất theo chuẩn phổ biến/an toàn (VD maxlength không nói → 255 theo
-  chuẩn DB; định dạng ngày → theo convention hệ thống). Có thể **dùng luôn**; chỉ
-  đổi nếu khách phản đối.
+- **Cao** — **chỉ khi đọc được căn cứ thật** và ghi rõ căn cứ đó: schema DB, code
+  validator, convention đã dùng ở màn hình tương tự (VD định dạng ngày → theo
+  convention hệ thống, dẫn ra chỗ đọc được). Có thể **dùng luôn**; chỉ đổi nếu
+  khách phản đối.
 - **Vừa** — hợp lý nhưng có phương án thay thế; nên xác nhận nếu tiện, không thì
   dùng đề xuất và ghi rõ đã giả định.
-- **Thấp** — thuộc nghiệp vụ riêng của khách, không suy đoán an toàn được (VD
-  role nào được xoá bản ghi đã duyệt; ngưỡng cảnh báo theo hợp đồng). **Bắt buộc
-  hỏi**, không tự quyết.
+- **Thấp** — không có căn cứ đọc được, hoặc thuộc nghiệp vụ riêng của khách.
+  **Bắt buộc hỏi**, không tự quyết. Gồm:
+  - **mọi ràng buộc SỐ của field mà spec không nói** — maxlength, min/max, số chữ
+    số thập phân. Đây là mức mặc định của chúng, không phải ngoại lệ;
+  - nghiệp vụ riêng (role nào được xoá bản ghi đã duyệt; ngưỡng cảnh báo theo
+    hợp đồng).
+
+**Ràng buộc số KHÔNG bao giờ là "Cao" chỉ vì có một con số nghe quen.** 255 không
+phải "chuẩn DB" — nó là mặc định của một số ORM, và đoán nó ra một bộ test case
+trông đầy đủ nhưng đo sai ràng buộc. Ba chỗ khác trong harness chặn đúng thứ này
+(`common-validate`, `testcase-writer`, cổng `/qa-write-cases`); mục F không được
+mở cửa sau cho nó.
 
 Đề xuất phải trung thực với độ tự tin — không gán "Cao" cho thứ thực chất là phán
 đoán nghiệp vụ. Mục này là mắt xích tham chiếu: cột Note trong file test case Excel
@@ -274,6 +305,7 @@ agent điều phối; skill chỉ quy định file phải có section này và �
 - [ ] E xuất hiện nếu có ≥2 vai trò hoặc bản ghi có vòng đời
 - [ ] E2 liệt kê đủ mọi AC, mã ổn định, mỗi AC trỏ về phần tương ứng ở C
 - [ ] F: mỗi điểm mờ đều có đề xuất + độ tự tin; không gán "Cao" cho phán đoán nghiệp vụ
+- [ ] **D6** xuất khi có cả hai bản phân tích; mọi dòng dẫn được `file:dòng` phía code
 - [ ] **G** chỉ xuất khi CÓ git diff; không có diff thì bỏ hẳn, không suy đoán impact
 - [ ] **H** chỉ xuất khi ước lượng >15 case; mỗi ô ghi S/M/L (không con số); đúng bộ Type
 - [ ] Số thứ tự mới được append ở cuối, không chèn giữa, không đánh lại

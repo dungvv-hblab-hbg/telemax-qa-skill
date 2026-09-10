@@ -191,7 +191,7 @@ Chạy đủ 5 lệnh theo thứ tự, dừng lại review thật ở 3 điểm 
 Đây là thứ quyết định export có giá trị hay không:
 
 1. Chạy `/qa-run` lần 2, chọn Round 2. Nó phải **grep thấy spec đã có và chạy
-   `npx playwright test -g`**, không dò lại bằng MCP. Kiểm bằng cách xem nó có mở
+   `npx playwright test --project=chromium -g`**, không dò lại bằng MCP. Kiểm bằng cách xem nó có mở
    trình duyệt qua MCP nữa không.
 2. **Đổi tay một selector trong spec cho hỏng** (VD sửa `getByRole('heading')` thành
    tên không tồn tại) rồi chạy lại. Spec sẽ Fail — nó phải **mở MCP kiểm lại**, kết
@@ -201,7 +201,7 @@ Chạy đủ 5 lệnh theo thứ tự, dừng lại review thật ở 3 điểm 
    Nó sẽ không tìm thấy `tests/TLM-XXXX.spec.ts` và dò lại từ đầu bằng MCP — đúng như
    thiết kế, nhưng xác nhận cho bạn thấy tên file là thứ load-bearing, không phải
    trang trí.
-4. Kiểm nó chạy `npx playwright test tests/TLM-XXXX.spec.ts` (nguyên file, một lệnh),
+4. Kiểm nó chạy `npx playwright test --project=chromium tests/TLM-XXXX.spec.ts` (nguyên file, một lệnh),
    chứ không chạy từng case một, và không bao giờ chạy `-g "TC-A-001"` trần.
 
 ### Bốn phép thử phá hoại (làm ở lần chạy thứ hai)
@@ -264,7 +264,7 @@ giữa chừng. Một ticket có thể là may.
 | Hướng dẫn cài MCP kiểu OAuth (Authenticate/Allow) | Sai — Playwright MCP là server local, dùng `claude mcp add playwright` |
 | `/qa-verify-prod` báo xanh mà không chạy case nào | Ticket chưa có case nào gắn `@prod-safe` — phải dừng, không được báo xanh |
 | Chạy lâu, không biết đang ở case nào, tưởng treo | Agent chỉ log theo bước — phải log một dòng cho mỗi case, kèm số đếm dồn |
-| `npx playwright test` chạy im lặng vài phút | Thiếu `--reporter=line` và `tee` vào `progress.log` |
+| `npx playwright test --project=chromium` chạy im lặng vài phút | Thiếu `--reporter=line` và `tee` vào `progress.log` |
 | Không thấy `progress.log` | Agent bỏ qua mục "Báo tiến trình", hoặc chạy sai thư mục gốc repo |
 | Round 2 vẫn dò lại bằng MCP dù đã có spec | File spec không đúng tên `tests/TLM-XXXX.spec.ts` nên không tra ra |
 | Chạy `-g "TC-A-001"` mà vớ phải case ticket khác | Quên kèm đường dẫn file — TC ID chỉ duy nhất trong một ticket |

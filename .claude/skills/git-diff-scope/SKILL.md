@@ -31,7 +31,7 @@ dựng checklist "cần test gì" vẫn là **spec ClickUp** + code hiện tại
 | Cần | Thiếu thì |
 |---|---|
 | Ticket ID | Hỏi. Suy từ tên nhánh phải được xác nhận trước khi dùng |
-| Nhánh base để so sánh | Mặc định **`stage`** — nhánh build ra dashboard-stage (xem `qa-config.md`). KHÔNG phải `dev`, KHÔNG phải `master`. Vẫn nêu ra cho người dùng xác nhận |
+| Nhánh base để so sánh | Mặc định **`stage`** — nhánh build ra dashboard-stage (`bash .claude/scripts/qa-config.sh ticket`). KHÔNG phải `dev`, KHÔNG phải `master`. Vẫn nêu ra cho người dùng xác nhận |
 | Repo git hợp lệ | Không phải repo git → báo, không đoán |
 
 Không tìm thấy commit/nhánh của ticket **không phải lỗi**, nhưng cũng không tự kết
@@ -55,7 +55,8 @@ branch lẫn commit message**. Ưu tiên theo thứ tự:
 Nếu đang làm trên nhánh feature theo ticket (`feature/TLM-2689-...`), lấy diff so với
 điểm rẽ nhánh chung với base (mặc định `stage`):
 ```
-git diff stage...<branch> --name-only         # dùng BA chấm: so với merge-base,
+git fetch origin stage --quiet                # ref local cũ = diff sai, im lặng
+git diff origin/stage...<branch> --name-only         # dùng BA chấm: so với merge-base,
                                                # không dính commit mới của stage
 ```
 

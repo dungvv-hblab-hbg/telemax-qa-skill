@@ -17,7 +17,7 @@ collection team, chỉ bổ sung phần thiếu và chạy đúng phạm vi.
 ## Yêu cầu môi trường
 
 `newman` (`npm install -g newman`) và collection + environment của team ở đường dẫn
-khai báo trong [../../qa-config.md](../../qa-config.md).
+khai báo ở mục Postman: `bash .claude/scripts/qa-config.sh postman`.
 
 ## Ranh giới (đọc kỹ — tránh nhầm loại)
 
@@ -33,7 +33,7 @@ khai báo trong [../../qa-config.md](../../qa-config.md).
 
 Collection KHÔNG nằm trong harness (`.claude/`). Nó là tài sản của team, sống trong
 repo code cạnh source và thay đổi theo API thật. Harness chỉ *trỏ tới* nó; đường dẫn
-khai báo trong [../../qa-config.md](../../qa-config.md).
+khai báo ở mục Postman: `bash .claude/scripts/qa-config.sh postman`.
 
 Mục Postman trong `qa-config.md` có trường **Trạng thái**:
 
@@ -109,7 +109,7 @@ Bàn giao cho agent để:
 - Với case Fail: **giữ lại message lỗi thật + status code thật** từ `result.json`
   để agent điền vào cột Actual Result của sheet Defects. "Assertion failed" không
   đủ làm Actual — bug cần biết API trả gì.
-- Việc tạo bug do `clickup-bug-format` + agent `bug-filer` lo, không thuộc skill này.
+- Việc tạo bug do `clickup-bug-format` + `/qa-file-bugs` lo, không thuộc skill này.
 
 Case API **không** chạy được (thiếu môi trường, thiếu data) thì báo lại để agent
 ghi `Blocked` + Note `[MANUAL] <lý do>` — đừng để case nằm `Not Run`.

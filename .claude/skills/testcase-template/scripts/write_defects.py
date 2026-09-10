@@ -74,9 +74,12 @@ def load_testcases(ws_tc):
         out[tid] = {
             "row": r,
             "section": ws_tc.cell(r, 2).value,
+            "type": ws_tc.cell(r, 3).value,          # phân nhánh UI/API/Manual
             "priority": ws_tc.cell(r, 4).value,
             "title": ws_tc.cell(r, 5).value,
+            "precondition": ws_tc.cell(r, 6).value,  # cần cho Phase 1
             "steps": ws_tc.cell(r, 7).value,
+            "data": ws_tc.cell(r, 8).value,          # cần cho Phase 1
             "expected": ws_tc.cell(r, 9).value,
             "r1_result": ws_tc.cell(r, 10).value,
             "r1_bug": ws_tc.cell(r, 11).value,
@@ -236,11 +239,131 @@ def mode_writeback(wb, mapping):
     return written, failed
 
 
+# ---------------------------------------------------------------- status
+DATA_REQ_MARK = "[DATA-REQ]"
+TRACE_START = 4      # dòng data sheet Traceability (khớp build.py)
+
+
+def mode_status(wb):
+    """Đọc-only: trả mọi con số mà cổng đầu vào của /qa-run cần, trong MỘT lệnh.
+
+    Trước khi có mode này, cổng phải tự viết openpyxl ad-hoc mỗi lần chạy (Read tool
+    không mở được .xlsx) — nên trên thực tế nó hay bị bỏ qua, và người dùng phát hiện
+    "41/45 case thiếu test data" ở phút thứ 11 thay vì trước khi chạy.
+    """
+    tcs = load_testcases(wb["Test Cases"])
+
+    def tally(key):
+        out = {"Pass": 0, "Fail": 0, "Blocked": 0, "Impact": 0, "Not Run": 0}
+        for info in tcs.values():
+            v = info[key] or "Not Run"
+            out[str(v)] = out.get(str(v), 0) + 1
+        return out
+
+    # Gom [DATA-REQ] theo điều kiện, không trả 13 dòng rời rạc.
+    data_req, manual = {}, {}
+    for tid, info in tcs.items():
+        note = str(info["note"] or "").strip()
+        for mark, bucket in ((DATA_REQ_MARK, data_req), (MANUAL_MARK, manual)):
+            if note.startswith(mark):
+                cond = note[len(mark):].strip() or "(không ghi lý do)"
+                bucket.setdefault(cond, []).append(tid)
+
+    # AC hở — cùng nguồn với điều kiện tiên quyết "không còn MISSING".
+    ac_missing = []
+    if "Traceability" in wb.sheetnames:
+        ws = wb["Traceability"]
+        for r in range(TRACE_START, ws.max_row + 1):
+            if str(ws.cell(r, 5).value or "").strip().upper() == "MISSING":
+                ac_missing.append(ws.cell(r, 1).value)
+
+    r1, r2 = tally("r1_result"), tally("r2_result")
+    done1 = r1["Pass"] + r1["Fail"]
+    done2 = r2["Pass"] + r2["Fail"]
+
+    # Đề xuất round — đúng ba trạng thái như cổng 3 của /qa-run mô tả.
+    if done2:
+        suggest = {"round": 2, "why": "Round 2 đã có kết quả thật — ghi tiếp Round 2"}
+    elif done1:
+        suggest = {"round": 2, "why": "Round 1 đã có kết quả thật — round mới là 2"}
+    elif r1["Blocked"] or r1["Impact"]:
+        suggest = {"round": 1, "why": ("Round 1 chỉ toàn Blocked/Not Run, chưa thực thi case nào — "
+                                       "GHI ĐÈ Round 1, đẩy sang Round 2 thì % Executed của "
+                                       "Round 1 vĩnh viễn bằng 0")}
+    else:
+        suggest = {"round": 1, "why": "Round 1 trống hoàn toàn"}
+
+    return {
+        "mode": "status",
+        "total_cases": len(tcs),
+        "round1": r1,
+        "round2": r2,
+        "already_run": {"round1": done1, "round2": done2},
+        "suggest_round": suggest,
+        "resume_hint": (f"RESUME: có sẽ bỏ qua {done2 or done1} case đã có Pass/Fail ở round đó"
+                        if (done1 or done2) else "chưa case nào có kết quả — RESUME không đổi gì"),
+        "defect_rows": len(defect_rows(wb["Defects & Follow-ups"]))
+                       if "Defects & Follow-ups" in wb.sheetnames else 0,
+        "data_req": [{"condition": k, "count": len(v), "tc_ids": v}
+                     for k, v in sorted(data_req.items(), key=lambda kv: -len(kv[1]))],
+        "manual": [{"reason": k, "count": len(v), "tc_ids": v}
+                   for k, v in sorted(manual.items(), key=lambda kv: -len(kv[1]))],
+        "ac_missing": ac_missing,
+        "note": ("Đọc-only, không ghi gì, không tạo .bak. Trả lời cổng 2/3/4 của /qa-run "
+                 "và điều kiện tiên quyết 'không còn AC MISSING' trong một lệnh."),
+    }
+
+
+def mode_cases(wb, round_no=None, not_run_only=False):
+    """Trả TỪNG test case đầy đủ — nguồn duy nhất cho test-runner.
+
+    Vì sao cần: agent phải có Type (phân ba nhánh), Precondition và Test Data (chạy
+    Phase 1), và cột Result của round (RESUME). `Read` tool không mở được .xlsx, còn
+    `--mode status` chỉ trả TỔNG HỢP. Không có mode này thì mỗi lần chạy agent lại
+    tự chế một script openpyxl tạm — mỗi lần một kiểu, và hay bị bỏ qua.
+    """
+    tcs = load_testcases(wb["Test Cases"])
+    rk = {1: "r1_result", 2: "r2_result"}.get(round_no)
+
+    out = []
+    for tid, i in tcs.items():
+        note = str(i["note"] or "").strip()
+        cur = i[rk] if rk else None
+        if not_run_only and str(cur or "") in ("Pass", "Fail"):
+            continue                       # RESUME: đã có kết quả thật thì bỏ qua
+        out.append({
+            "tc_id": tid, "row": i["row"], "section": i["section"],
+            "type": i["type"], "priority": i["priority"], "title": i["title"],
+            "precondition": i["precondition"], "steps": i["steps"],
+            "data": i["data"], "expected": i["expected"], "note": note,
+            "manual": note.startswith(MANUAL_MARK),
+            "data_req": note.startswith(DATA_REQ_MARK),
+            "r1": i["r1_result"], "r2": i["r2_result"],
+            "current_round_result": cur,
+        })
+    return {
+        "mode": "cases",
+        "round": round_no,
+        "not_run_only": not_run_only,
+        "count": len(out),
+        "total_in_file": len(tcs),
+        "cases": out,
+        "note": ("Đọc-only. Type dùng để phân nhánh UI/API/Manual; manual=true là case "
+                 "[MANUAL] (write_defects sẽ KHÔNG tạo defect cho nó). Với RESUME dùng "
+                 "--round N --not-run-only để chỉ lấy case chưa có Pass/Fail."),
+    }
+
+
 # ---------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--file", required=True)
-    ap.add_argument("--mode", required=True, choices=["fill", "read", "writeback"])
+    ap.add_argument("--mode", required=True,
+                    choices=["fill", "read", "writeback", "status", "cases"])
+    ap.add_argument("--round", type=int, choices=[1, 2], default=None,
+                    help="mode cases: round nào để đọc Result (cho RESUME)")
+    ap.add_argument("--not-run-only", action="store_true",
+                    help="mode cases: bỏ case đã có Pass/Fail ở --round")
     ap.add_argument("--actuals", default="{}", help='JSON {TC_ID: actual_text} cho mode fill')
     ap.add_argument("--bugmap", default="{}", help='JSON {TC_ID: ticket_id} cho mode writeback')
     ap.add_argument("--no-backup", action="store_true",
@@ -264,6 +387,10 @@ def main():
             "backup": None if args.no_backup else args.file + ".bak",
             "reminder": "openpyxl xoá cache công thức khi save — chạy recalc.py để Summary hiện số lại.",
         }
+    elif args.mode == "status":
+        result = mode_status(wb)
+    elif args.mode == "cases":
+        result = mode_cases(wb, args.round, args.not_run_only)
     elif args.mode == "read":
         rows, skipped = mode_read(wb)
         result = {

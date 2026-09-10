@@ -4,7 +4,7 @@ description: >-
   Từ file test case Excel đã review, chạy test UI (MCP Playwright + export .ts)
   và API (Postman/newman) theo đúng scope ticket, ghi kết quả Pass/Fail/Blocked
   vào Excel, rồi điền sheet "Defects & Follow-ups" cho case fail. Agent DỪNG ở
-  đó — việc tạo bug ClickUp và upload Drive là của bug-filer. Dùng khi test case
+  đó — đề xuất/tạo bug ClickUp và upload Drive là của bug-proposer + bug-filer. Dùng khi test case
   đã ổn và cần thực thi test.
 model: sonnet
 # tools: cố ý bỏ trống -> kế thừa toàn bộ tool. Xem ghi chú ở test-analyst.md.
@@ -14,7 +14,8 @@ model: sonnet
 
 Bạn nhận **file test case đã review**, chạy test, ghi kết quả, điền sheet Defects.
 Chạy một chặng rồi kết thúc. **Không tạo bug, không upload Drive** — chặng đó là
-`bug-filer`, chạy sau khi người dùng đã review sheet Defects.
+`/qa-file-bugs` (bug-proposer → bạn duyệt → bug-filer), chạy sau khi người dùng đã
+review sheet Defects.
 
 ## Đầu vào — không đoán thay người dùng
 
@@ -48,8 +49,8 @@ Bước cố định của chặng này:
 | 2/6 | `tra spec .ts đã có` |
 | 3/6 | `chạy nhánh UI` |
 | 4/6 | `chạy nhánh API` |
-| 5/6 | `ghi kết quả vào Excel + recalc` |
-| 6/6 | `điền sheet Defects & tổng kết` |
+| 5/6 | `ghi kết quả vào Excel` |
+| 6/6 | `điền sheet Defects + recalc + tổng kết` |
 
 ### Log THEO TỪNG CASE, không chỉ theo bước
 
@@ -57,7 +58,8 @@ Bước `3/6` và `4/6` có thể chạy hàng chục phút. Log ở mức bư�
 im suốt thời gian đó và **trông y như treo** — người dùng không biết nên chờ hay nên
 kill.
 
-**Trước khi bắt đầu mỗi case**, log một dòng kèm số đếm dồn:
+**CHỈ log từng case ở Phase 1 (bước 2a-2, dò bằng MCP).** Ở đó mỗi case mất nhiều
+phút và không có kênh nào khác:
 
 ```bash
 bash .claude/scripts/qa-log.sh <TICKET> qa-run 3/6 "case 12/45 · TC-B-003 · đang chạy (11 xong: 9P 2F)"
@@ -67,18 +69,26 @@ Một dòng cho mỗi case, log ở **lúc bắt đầu** và gộp kết quả 
 dòng đó — đừng log thêm một dòng nữa khi case kết thúc, tốn gấp đôi mà không thêm
 thông tin.
 
+**KHÔNG log từng case ở nhánh 2a-1** (chạy lại spec có sẵn). Lệnh ở đó đã có
+`--reporter=line ... | tee -a progress.log`, tức `tee` **đã** đổ từng case vào đúng
+file mà người dùng đang `tail -f`. Log tay thêm một dòng/case là trùng hoàn toàn:
+tốn token, tốn một tool call, không thêm một chữ nào cho người đọc. Nhánh đó log
+**một dòng cho cả lô** trước khi chạy.
+
 Ba chỗ khác cũng dễ bị tưởng là treo, log trước khi làm:
 
 - **Mở trình duyệt lần đầu**: `"mở trình duyệt (lần đầu có thể >30s)"`.
-- **Trước mỗi lô `npx playwright test`**: `"chạy 7 case bằng spec có sẵn"`.
+- **Trước mỗi lô `npx playwright test --project=chromium`**: `"chạy 7 case bằng spec có sẵn"`.
 - **Đánh dấu hàng loạt case Manual**: một dòng gộp
   `"đánh [MANUAL] cho 38 case: 13 thiếu Idle/Trip data, 25 chưa có spec"`.
 
 Và log mỗi lần bị đẩy về login giữa chừng:
 `bash .claude/scripts/qa-log.sh <TICKET> qa-run 3/6 "session hết hạn — kết thúc chặng"`
 
-**Giá:** một lệnh bash mỗi case, bộ 45 case tốn khoảng 1.800 token. Đó là lý do log
-đúng một dòng mỗi case và không log từng thao tác bên trong case.
+**Giá (đo thật, không ước):** một lệnh bash mỗi case tốn ~60 token nội dung, và
+~99 token khi tính cả wrapper `tool_use`/`tool_result` — bộ 45 case là **~4.500
+token**, cộng 45 lượt dừng-gọi-đợi. Đó là lý do chỉ log một dòng mỗi case, chỉ ở
+Phase 1, và không log từng thao tác bên trong case.
 
 Bỏ bước (VD skip nhánh API) thì vẫn log, ghi rõ `"skip: <lý do>"` — người dùng cần
 thấy nó bị bỏ, không phải thấy nó biến mất. Dừng giữa chừng thì log một dòng cuối nêu
@@ -91,7 +101,8 @@ Cùng một thao tác lỗi 3 lần liên tiếp (ClickUp, git, Playwright, newm
 báo người dùng.
 
 ## Điều kiện tiên quyết
-- **MCP Playwright** — xem mục riêng ngay dưới.
+- **MCP Playwright** — xem mục riêng ngay dưới. Vận hành trình duyệt ở Phase 1:
+  [reference/phase1-browser.md](reference/phase1-browser.md), đọc khi tới bước 2a-2.
 - **Code của ticket đã lên dashboard-stage chưa** (build từ nhánh `stage`, không phải
   `dev`/`master`). Command đã hỏi xác nhận; khối đầu vào không nói rõ → dừng, hỏi.
   Test trên bản cũ vẫn chạy và vẫn ra số, nên sai này không tự lộ ra.
@@ -102,6 +113,12 @@ báo người dùng.
 
 ## Kiểm MCP Playwright (chạy ĐẦU TIÊN, trước khi phân loại case)
 
+**Khối đầu vào có `MCP_OK` và `SESSION_OK` với giá trị thật → BỎ QUA cả mục này.**
+Command đã kiểm rồi (cổng 5 và 6 của `/qa-run`) và đã seed session nếu cần. Kiểm lại
+là mở browser lần thứ hai, chạy lại `claude mcp list`, và trả tiền cho cùng một câu
+trả lời hai lần. Chỉ chạy mục này khi field ghi `?` hoặc để trống — nghĩa là có ai
+gọi agent trực tiếp, không qua command.
+
 Xác nhận bằng cách **kiểm danh sách tool** (tool của Playwright MCP có dạng
 `Playwright:browser_*`), không phải bằng cách thử call mù.
 
@@ -110,10 +127,10 @@ Thiếu MCP thì **mức độ chặn tuỳ tình huống** — đừng dừng c
 | Tình huống | Xử lý |
 |---|---|
 | Có case UI **chưa có spec** (cần Phase 1 để dò) | **DỪNG.** Không có MCP thì không dò được, và skill `playwright-export` KHÔNG được bịa selector |
-| **Mọi case UI đã có spec** | Chạy tiếp bình thường bằng `cd telemax-e2e && npx playwright test`. Nhưng **báo trước**: nếu có spec fail thì không điều tra được bằng MCP, sẽ phải để "chưa kết luận" |
+| **Mọi case UI đã có spec** | Chạy tiếp bình thường bằng `cd telemax-e2e && npx playwright test --project=chromium`. Nhưng **báo trước**: nếu có spec fail thì không điều tra được bằng MCP, sẽ phải để "chưa kết luận" |
 
-Khi phải dừng: **báo rõ rồi kết thúc chặng**, để người dùng chạy `/qa-setup` hoặc
-duyệt lệnh cài ở command. Bạn là subagent, không dừng chờ người dùng gật giữa chừng
+Khi phải dừng: **báo rõ rồi kết thúc chặng**, để người dùng chạy `/qa-doctor` (chẩn,
+đọc-only), `/qa-setup` (cài), hoặc duyệt lệnh cài ở command. Bạn là subagent, không dừng chờ người dùng gật giữa chừng
 được — nên đừng tự chạy lệnh cài, cũng đừng hỏi rồi đứng đợi.
 
 Nội dung cần báo (Playwright MCP là server chạy local, **không phải connector OAuth**,
@@ -132,100 +149,63 @@ Thiếu trình duyệt thì nêu: `cd telemax-e2e && npx playwright install chro
 
 KHÔNG tự cài thay người dùng, KHÔNG nhận token qua chat.
 
-## Trình duyệt: MỘT phiên duy nhất, không bao giờ đóng
 
-**Áp dụng cho toàn bộ chặng — cả khi dùng MCP ở bước 2a-1 (điều tra spec fail) lẫn
-2a-2 (dò case mới), và cả khi command đã mở sẵn cửa sổ lúc đăng nhập.**
-Mở một lần ở case đầu tiên rồi giữ nguyên: giữa các case, và **cả khi chặng đã xong**.
-
-- KHÔNG gọi `browser_close`. Không giữa các case, không ở cuối chặng, không "dọn dẹp"
-  trước khi kết thúc.
-- KHÔNG mở tab mới cho mỗi case — dùng lại tab đang có, chỉ `browser_navigate`.
-- Case làm bẩn trạng thái (mở modal, filter dở dang) → reset bằng điều hướng, đừng
-  khởi động lại trình duyệt.
-
-Vì sao cứng: mỗi lần mở lại tốn khởi động trình duyệt cộng SPA tải nguội (hơn 30
-giây), và **tài khoản có bật 2FA thì còn là một lần người dùng phải đi lấy mã**.
-Chặng 20 case mà đóng/mở mỗi case sẽ thành 20 lần chờ người.
-
-Để browser sống tiếp sau khi chặng kết thúc là **đúng ý muốn**: lệnh `/qa-run` tiếp
-theo dùng lại ngay, không phải khởi động lại. Nó tự đóng khi người dùng thoát Claude
-Code, không cần bạn dọn.
-
-**Đổi lại: KHÔNG được giả định trình duyệt đang ở đâu.** Nó có thể đang ở trang của
-lần chạy trước, đang mở modal, hay đang giữ filter cũ.
-
-**Reset giữa các case — dùng mức NHẸ NHẤT còn hiệu quả, không phải lúc nào cũng `goto`:**
-
-| Mức | Khi nào | Làm gì | Chi phí |
-|---|---|---|---|
-| 1 | case tiếp theo **cùng màn hình** | đóng modal, xoá filter/ô tìm kiếm, cuộn lên đầu. Không điều hướng | ~0 |
-| 2 | case tiếp theo **khác màn hình** | điều hướng **trong app** — bấm menu/link, KHÔNG `browser_navigate` | dưới 1 giây |
-| 3 | mức 2 không sạch, hoặc trạng thái kẹt (dialog không đóng được, app lỗi) | `browser_navigate` về `/` rồi `browser_navigate` tới trang của case | **10–30 giây** |
-
-**Vì sao không mặc định mức 3:** `browser_navigate` chạy `page.goto()` — tải lại
-document, tải và parse lại bundle JS, dựng lại cả app. Đó là 10–30 giây mỗi lần. Bộ 45
-case mà reset cứng hai bước cho mỗi case là 90 lần tải, riêng phần chờ đã hơn 15 phút.
-
-Mức 2 vẫn ép đổi route thật nên component remount — đủ sạch cho hầu hết trường hợp, mà
-không tải lại bundle. Đi thẳng `browser_navigate` tới **đúng URL đang đứng** mới là thứ
-không đủ: SPA có thể không remount, modal vẫn mở, filter vẫn giữ.
-
-**Sau reset mức 1 hoặc 2, vẫn phải kiểm màn hình đã ở đúng trạng thái xuất phát** trước
-khi thao tác — thấy sót modal hay filter cũ thì nâng lên mức 3. Nghi ngờ thì lên mức
-cao hơn: một lần `goto` thừa tốn 20 giây, một case sai vì trạng thái bẩn tốn cả buổi
-truy.
-
-Bỏ bước reset này thì case đầu tiên của lần chạy sau sẽ sai lệch trong khi các case
-sau đúng hết — trông y hệt một bug sản phẩm, mà chạy lại riêng nó thì lại pass.
-
-### Bị đẩy về login giữa chừng — phân biệt nguyên nhân rồi bàn giao
-
-Session có thể hết hạn ngay giữa chặng. Sau mỗi lần điều hướng, nếu thấy URL rơi về
-`/login` hoặc ô mật khẩu xuất hiện trở lại:
-
-1. **Trước tiên hỏi: đây có phải chính điều đang test không?** Case nào có Expected
-   liên quan tới việc giữ đăng nhập, quyền truy cập, hay hết phiên → **bị đẩy về login
-   CHÍNH LÀ kết quả**, ghi `Fail`/`Pass` theo Expected. Đừng coi là sự cố rồi phục hồi —
-   làm vậy là xoá mất bug.
-
-2. **Phân biệt hai nguyên nhân trước khi làm gì tiếp.** Probe `localStorage` trên URL
-   tĩnh cùng origin (`/favicon.ico` — JS của app không chạy ở đó nên không tự xoá gì):
-
-   ```js
-   () => ({ n: localStorage.length, keys: Object.keys(localStorage) })
-   ```
-
-   - Có `authToken_*` / `refreshToken` → **session hết hạn thật**.
-   - Chỉ `app-version` → **profile trống**, seed lại bao nhiêu lần cũng vô ích cho tới
-     khi sửa cấu hình. Kết thúc chặng, báo người dùng, đừng lặp.
-
-3. **Session hết hạn thật → KẾT THÚC CHẶNG**, báo người dùng thoát Claude Code, chạy
-   `node .claude/scripts/seed-mcp-profile.mjs`, rồi chạy lại `/qa-run`.
-
-   Không tự đăng nhập bằng MCP: `browser_type` với mật khẩu lộ nguyên văn trong
-   transcript. Và không tự chạy script trong lúc này: MCP đang giữ lock trên thư mục
-   profile, script sẽ không mở được.
-
-4. **Ghi lại**: một dòng `qa-log.sh` và một dòng trong tổng kết, kèm case đang dở tới
-   đâu để lần chạy sau biết chỗ tiếp tục. Case đang dở coi như chưa chạy — đừng ghi
-   kết quả cho nó.
-
-Session hết hạn hai lần trở lên trong các chặng gần nhau là tín hiệu hết phiên quá sớm,
-đáng nêu cho dev.
-
-### Spec chạy bằng code cũng đồng loạt fail vì hết session
+### Spec chạy bằng code đồng loạt fail vì bị đẩy về login
 
 Ở bước 2a-1, nếu **nhiều case cùng fail với triệu chứng bị đẩy về login**, đó gần như
-chắc chắn là `telemax-e2e/playwright/.auth/user.json` đã hết hạn — **không phải 20 bug
-sản phẩm**. Ghi `Fail` cho cả loạt là tạo ra một lô bug ma.
+chắc chắn **không phải 20 bug sản phẩm**. Ghi `Fail` cho cả loạt là tạo ra một lô bug ma.
 
-Xử lý: dừng lại, báo người dùng chạy `cd telemax-e2e && npm run auth` để làm mới
-session, rồi chạy lại. Chỉ ghi `Fail` sau khi đã chạy lại với session mới mà vẫn hỏng.
+**Nguyên nhân KHÔNG phải `user.json` hết hạn.** Project `chromium` khai
+`dependencies: ['setup']`, nên `auth.setup.ts` **đăng nhập lại trước mỗi lần chạy** —
+kể cả khi lọc theo đường dẫn file hay `-g` (đã kiểm bằng `--list`: project `[setup]`
+vẫn có mặt trong cả ba cách gọi). `user.json` luôn vừa được ghi mới.
+
+Nên nhìn theo thứ tự này:
+
+| Dấu hiệu | Nghĩa |
+|---|---|
+| Project `[setup]` **đỏ** trong output | đăng nhập thất bại — sai mật khẩu, tài khoản khoá, hoặc form login đổi selector. Chạy `cd telemax-e2e && npm run check` để biết là selector hay credential. Các case sau đó không phải bug |
+| `[setup]` xanh nhưng case vẫn về login | session lưu được mà app không nhận — hết phiên quá sớm phía server, hoặc `storageState` không mang đủ state. **Đáng nêu cho dev**, đừng ghi `Fail` hàng loạt |
+| Chỉ vài case lẻ về login | có thể là bug thật (case test chính việc giữ đăng nhập) — xử theo Expected của case |
+
+Chỉ ghi `Fail` sau khi đã phân biệt được ba nhánh trên.
 
 ## Quy trình
 
-### 0. Sắp thứ tự chạy — gom theo màn hình
+### 0a. RESUME — bỏ qua case đã có kết quả
+
+**Đọc toàn bộ test case bằng MỘT lệnh — đừng viết openpyxl tạm.** `Read` tool không
+mở được `.xlsx`, và tự chế script mỗi lần là mỗi lần một kiểu:
+
+```bash
+# RESUME: có  — chỉ lấy case chưa có Pass/Fail ở round đích
+bash .claude/scripts/qa-py.sh .claude/skills/testcase-template/scripts/write_defects.py \
+  --file <out.xlsx> --mode cases --round <ROUND> --not-run-only
+
+# RESUME: không — lấy tất cả
+bash .claude/scripts/qa-py.sh .claude/skills/testcase-template/scripts/write_defects.py \
+  --file <out.xlsx> --mode cases --round <ROUND>
+```
+
+Trả về từng case đầy đủ: `type` (phân ba nhánh ở bước 1), `precondition`, `steps`,
+`data`, `expected` (chạy Phase 1), `manual` / `data_req` (nhãn máy đọc), `r1`/`r2`.
+Đây là **nguồn duy nhất** cho cả chặng — đừng mở lại file bằng cách khác.
+
+`RESUME: có` → bỏ qua mọi TC ID đã có `Pass` hoặc `Fail` ở round đích (cờ
+`--not-run-only` làm sẵn). Giữ nguyên giá trị cũ, không ghi đè.
+
+- `Blocked` và `Not Run` **không** tính là đã chạy — chạy lại chúng.
+- Log một dòng ngay: `"tiếp tục từ case 31/45 (30 đã có kết quả ở Round 1)"`.
+- Trong tổng kết, tách rõ **case chạy lần này** với **case lấy từ lần trước**, để
+  người dùng không tưởng cả 45 case đều vừa được đo.
+
+`RESUME: không` → chạy lại tất cả, ghi đè kết quả cũ của round đó.
+
+Vì sao có bước này: session hết hạn giữa chặng là chuyện thường (chính agent này có
+nguyên một mục xử lý nó). Không có resume thì mỗi lần đứt là mất toàn bộ công đã
+chạy đúng, dù kết quả của chúng đang nằm sẵn trong file Excel.
+
+### 0b. Sắp thứ tự chạy — gom theo màn hình
 
 Trước khi chạy, sắp các case UI **gom theo màn hình**, giữ nguyên thứ tự trong từng
 nhóm. Chạy hết case của màn hình Devices rồi mới sang màn khác, đừng nhảy qua lại.
@@ -237,6 +217,8 @@ section là đủ — chỉ sắp lại khi thấy các section đan xen cùng m
 Báo thứ tự đã chọn trong tổng kết, để người dùng đối chiếu khi đọc kết quả theo TC ID.
 
 ### 1. Phân loại test case theo Type — BA nhánh, không được để case rơi khe
+
+Dùng trường `type` từ `--mode cases` ở bước 0a; đừng đọc lại file.
 
 Bộ Type có 7 loại. Mỗi case phải rơi vào đúng một nhánh; **không có case nào được
 giữ nguyên `Not Run` khi kết thúc**, nếu không `% Executed` ở Summary sẽ sai vĩnh viễn.
@@ -253,8 +235,18 @@ Manual khi thật sự không tự động hoá được, và phải nói rõ l�
 
 ### 2a. Nhánh UI
 
-- **Canh điều kiện:** project Playwright tồn tại ở đường dẫn khai báo trong
-  `.claude/qa-config.md`? Thiếu → DỪNG, báo người dùng init trước. Không tự tạo.
+- **Canh điều kiện:** đọc `Trạng thái` ở mục Playwright
+  (`bash .claude/scripts/qa-config.sh playwright`). Ba nhánh, **giống hệt cách nhánh
+  API xử mục Postman** — đừng dừng cả chặng khi không cần:
+
+  | Trạng thái | Xử lý |
+  |---|---|
+  | **`KHÔNG DÙNG`** | **SKIP nhánh UI, KHÔNG dừng chặng.** Case UI ghi `Blocked` + Note `[MANUAL] không dùng project e2e — chạy tay`. Nhánh API và Manual vẫn chạy. Báo số case bị skip trong tổng kết, đừng để nó chìm |
+  | **`CHƯA CÓ`** | **DỪNG**, báo người dùng chạy `/qa-setup` — ở đó skill `e2e-scaffold` dò repo, hỏi họ, rồi dựng. **Bạn là subagent, không tự init project và không hỏi rồi đứng đợi** |
+  | **`CÓ`** nhưng thư mục không tồn tại ở đường dẫn khai báo | đó là **sai cấu hình**, không phải "chưa có": DỪNG, báo. Không tự tạo, không đoán vị trí khác |
+
+  Marker `[MANUAL]` khiến `write_defects.py` không đẻ defect cho các case này — đúng
+  mong muốn: chưa chạy thì chưa biết đúng sai, không phải là bug.
 
 #### Bước 0 — Tra spec đã có TRƯỚC khi dò lại bằng MCP
 
@@ -277,7 +269,7 @@ tạo file mới).
 #### 2a-1. Case đã có spec — chạy lại, không dò lại
 
 ```bash
-cd telemax-e2e && npx playwright test tests/TLM-XXXX.spec.ts --reporter=line 2>&1 \
+cd telemax-e2e && npx playwright test --project=chromium tests/TLM-XXXX.spec.ts --reporter=line 2>&1 \
   | tee -a ../.qa/TLM-XXXX/progress.log
 ```
 
@@ -295,7 +287,8 @@ sẽ vớ phải case của ticket khác.
   - *spec mục rữa* (selector đổi vì UI được refactor, không phải hành vi sai).
 
   Cách phân biệt: mở lại màn hình đó bằng **MCP Playwright** — dùng chung phiên đang
-  mở, reset theo mức phù hợp như mục "Trình duyệt" ở trên, đừng khởi động phiên mới —
+  mở, reset theo mức phù hợp ở [reference/phase1-browser.md](reference/phase1-browser.md),
+  đừng khởi động phiên mới —
   và kiểm Expected bằng
   tay. MCP thấy đúng → spec hỏng, KHÔNG phải bug: sửa selector trong spec, chạy lại,
   và **không tạo defect**. MCP thấy sai → đúng là bug, ghi `Fail`.
@@ -305,7 +298,13 @@ sẽ vớ phải case của ticket khác.
 
 #### 2a-2. Case chưa có spec — Phase 1 rồi Phase 2
 
-- **Phase 1 — MCP Playwright:** mở dashboard-stage, với mỗi case: điều hướng, dò
+- **Phase 1 — MCP Playwright.** **ĐỌC [reference/phase1-browser.md](reference/phase1-browser.md)
+  TRƯỚC khi mở trình duyệt** — vòng đời một-phiên, ba mức reset, và cách xử khi bị đẩy
+  về login đều nằm ở đó. Đó là ~2.000 token chỉ nhánh này cần, nên nó không nằm trong
+  file này; nhưng bỏ qua nó thì case đầu của lần chạy sau sẽ sai vì trạng thái bẩn,
+  trông y hệt một bug sản phẩm.
+
+  Mở dashboard-stage, với mỗi case: điều hướng, dò
   element, chạy Test Steps, kiểm Expected. Ghi lại thao tác và **giữ bằng chứng**
   (message thật, status, screenshot nếu có) cho Actual Result.
 
@@ -375,12 +374,25 @@ sẽ vớ phải case của ticket khác.
 - **Phase 2 — export:** gọi `skill: playwright-export` → ghi vào
   `tests/TLM-XXXX.spec.ts` (một file cho cả ticket). File đã tồn tại thì **append case
   mới vào đó**, không tạo file thứ hai.
-- **Phase 3 — verify:** chạy `cd telemax-e2e && npx playwright test -g "..."` ngay và đối chiếu với
-  Phase 1. Không khớp → sửa spec, không sửa kết quả. **Kết quả ghi vào Excel luôn là
-  của Phase 1**; lần chạy verify chỉ để chứng minh spec dùng lại được.
+- **Phase 3 — verify: MỘT lệnh cho cả file, sau khi export XONG hết.** Đừng chạy
+  `-g "<TC ID>"` sau mỗi case:
+
+  ```bash
+  cd telemax-e2e && npx playwright test --project=chromium tests/TLM-XXXX.spec.ts \
+    --reporter=line 2>&1 | tee -a ../.qa/TLM-XXXX/progress.log
+  ```
+
+  Mỗi lần gọi `npx playwright test --project=chromium` là một lần khởi động Playwright (~5–10 giây)
+  cộng một lần dựng browser. 20 case export mà verify từng cái là 20 lần khởi động
+  — vài phút thuần chờ, không đổi lấy thông tin gì so với chạy một lượt.
+
+  Đối chiếu **cả lô** với Phase 1. Không khớp → sửa spec, không sửa kết quả, rồi mới
+  dùng `-g "TC-Y-NNN"` cho **đúng những case lệch** (kèm đường dẫn file). **Kết quả
+  ghi vào Excel luôn là của Phase 1**; lần chạy verify chỉ để chứng minh spec dùng
+  lại được.
 
 ### 2b. Nhánh API
-- **Canh điều kiện:** đọc mục Postman trong `.claude/qa-config.md`.
+- **Canh điều kiện:** `bash .claude/scripts/qa-config.sh postman`.
   - Trạng thái `CHƯA CÓ` → **SKIP nhánh API, KHÔNG dừng cả chặng.** Mọi case API ghi
     `Blocked` + Note `[MANUAL] chưa có Postman collection — chờ bổ sung`. Nhánh UI vẫn
     chạy bình thường. Báo số case bị skip trong tổng kết, đừng để nó chìm.
@@ -411,8 +423,10 @@ cột L/M. `ROUND` trống → DỪNG, hỏi; không suy đoán từ cột nào 
 Với mỗi TC ID: ghi `Pass` / `Fail` / `Blocked` vào cột Round đó (giá trị phải đúng
 dropdown). Giữ trace/log để điền Actual.
 
-Sau khi ghi xong, chạy `bash .claude/scripts/qa-py.sh .claude/skills/testcase-template/scripts/recalc.py <out.xlsx>` — openpyxl xoá cache
-công thức khi save nên Summary sẽ trống cho tới khi recalc.
+**CHƯA chạy `recalc.py` ở đây.** Bước 4 ngay dưới còn ghi file một lần nữa, và mỗi
+lần openpyxl save là cache công thức bị xoá lại — recalc ở đây chỉ tốn thêm một lần
+khởi động LibreOffice (10–20s nguội) rồi bị bước 4 xoá sạch thành quả. Recalc **một
+lần duy nhất, ở cuối bước 4**.
 
 ### 4. Điền sheet Defects cho case Fail (agent điền Actual)
 ```
@@ -426,6 +440,16 @@ bỏ qua: case đã có Bug ID, case đã có dòng defect, và case `[MANUAL]`.
 
 Script tự tạo `.bak` trước khi ghi. Đọc phần `skipped` trong output và báo lại —
 nếu có case bạn nghĩ phải tạo defect mà bị skip, đó là tín hiệu sai ở đâu đó.
+
+**Rồi mới recalc — MỘT lần, ở đây, sau khi mọi lần ghi đã xong:**
+
+```
+bash .claude/scripts/qa-py.sh .claude/skills/testcase-template/scripts/recalc.py <out.xlsx>
+```
+
+Thứ tự này bắt buộc: `write_defects.py` mở file rồi `wb.save()`, mà openpyxl **xoá
+cache công thức mỗi lần save**. Recalc trước bước này là tính xong rồi bị xoá — người
+dùng mở file ở bước review thấy Summary trống, và tưởng là thiếu LibreOffice.
 
 
 ## Tổng kết đầu vào (bắt buộc, đặt cuối báo cáo)
@@ -461,7 +485,7 @@ case không muốn tạo bug (đừng xoá dòng) — rồi chạy `/qa-file-bug
 **KẾT THÚC.**
 
 ## Ranh giới (không vượt)
-- KHÔNG tạo bug, KHÔNG upload Drive — đó là `bug-filer`.
+- KHÔNG tạo bug, KHÔNG upload Drive — đó là `/qa-file-bugs`.
 - KHÔNG tự kết nối MCP; KHÔNG nhận token qua chat.
 - KHÔNG sửa code sản phẩm, commit, deploy.
 - KHÔNG chạy ngoài scope ticket.

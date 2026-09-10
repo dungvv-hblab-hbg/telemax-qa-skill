@@ -18,9 +18,12 @@ là bên kiểm và dừng — xem `test-runner`.
 
 Node + `@playwright/test`, và project `telemax-e2e` đã tồn tại với
 `playwright.config.ts` + `auth.setup.ts`. Đường dẫn khai báo ở
-[../../qa-config.md](../../qa-config.md).
+mục Playwright: `bash .claude/scripts/qa-config.sh playwright`.
 
-Project chưa tồn tại là điều kiện chưa thoả: DỪNG và báo người dùng init trước.
+Mục Playwright có trường **`Trạng thái`**: `CÓ` · `CHƯA CÓ` · `KHÔNG DÙNG`. Skill này
+chỉ chạy khi `CÓ`. `CHƯA CÓ` → người dùng chạy `/qa-setup` (skill `e2e-scaffold` dựng);
+`KHÔNG DÙNG` → nhánh UI bị skip, không có gì để export.
+
 KHÔNG tự tạo project, KHÔNG ghi file .ts vào hư không. Việc kiểm tra và dừng/báo là
 hành vi luồng do agent thực thi trước khi gọi skill.
 
@@ -31,7 +34,7 @@ hành vi luồng do agent thực thi trước khi gọi skill.
 | Thao tác đã dò được ở Phase 1 | agent chạy MCP Playwright | Hỏi. Skill không tự dò element, không tự bịa selector |
 | TC ID + Expected Result | file test case Excel | Hỏi. Không viết test không gắn TC ID |
 | Test data cho case cần dữ liệu đặc thù | người dùng cung cấp | Ghi `test.skip` kèm lý do, hoặc báo để đánh `[MANUAL]`. **Không bịa data** |
-| Đường dẫn project | `qa-config.md` | Dừng, báo người dùng init trước |
+| Đường dẫn project + `Trạng thái` | `bash .claude/scripts/qa-config.sh playwright` | `CHƯA CÓ` → báo chạy `/qa-setup`. `KHÔNG DÙNG` → không export gì |
 | Ticket ID (để đặt tên file spec) | khối đầu vào của command | Hỏi. Tên file spec chính là mã ticket; thiếu nó thì lần sau không tra lại được |
 
 ## Vị trí trong quy trình 2 phase
@@ -63,7 +66,7 @@ hình. Không tách thành `vehicle-detail.spec.ts`, `vehicle-list.spec.ts`... �
 thì chạy lại cả bộ của một ticket phải nhớ mấy file, còn gom một file thì:
 
 ```bash
-cd telemax-e2e && npx playwright test tests/TLM-2899.spec.ts     # chạy lại toàn bộ ticket, một lệnh
+cd telemax-e2e && npx playwright test --project=chromium tests/TLM-2899.spec.ts     # chạy lại toàn bộ ticket, một lệnh
 ```
 
 File spec ánh xạ 1:1 với file test case Excel `.qa/TLM-2899/TCs_*.xlsx`. Cùng phạm vi,
@@ -80,7 +83,7 @@ Tên describe đặt đúng tên màn hình và **giữ nhất quán giữa các
 chạy regression theo màn hình xuyên nhiều ticket khi cần:
 
 ```bash
-cd telemax-e2e && npx playwright test -g "Vehicle Detail"        # mọi ticket từng test màn hình này
+cd telemax-e2e && npx playwright test --project=chromium -g "Vehicle Detail"        # mọi ticket từng test màn hình này
 ```
 
 **Tiêu đề test:** `TC-Y-NNN — <mô tả ngắn>`, đúng TC ID trong Excel. Dấu phân cách là
@@ -90,7 +93,7 @@ TC ID chỉ duy nhất **trong một ticket**, nên khi chạy theo TC ID **luô
 dẫn file**, đừng bao giờ chạy `-g "TC-A-001"` trần:
 
 ```bash
-cd telemax-e2e && npx playwright test tests/TLM-2899.spec.ts -g "TC-A-001"
+cd telemax-e2e && npx playwright test --project=chromium tests/TLM-2899.spec.ts -g "TC-A-001"
 ```
 
 **Header comment** ở đầu file:
@@ -232,10 +235,24 @@ làm Actual thay vì mô tả chung chung "nó lỗi". Nhớ gitignore `test-res
 
 Spec được viết từ thao tác MCP đã thành công nên nó *có vẻ* đúng. "Có vẻ đúng" không
 đủ: có thể không compile, có thể selector tạm sai, và không ai biết cho tới lần chạy
-sau. Chạy verify ngay, đây là feedback loop bắt buộc:
+sau. Chạy verify, đây là feedback loop bắt buộc.
+
+**Export XONG hết rồi chạy MỘT lệnh cho cả file** — đừng verify từng case sau mỗi
+lần export:
 
 ```bash
-cd telemax-e2e && npx playwright test tests/TLM-XXXX.spec.ts -g "TC-Y-NNN"
+cd telemax-e2e && npx playwright test --project=chromium tests/TLM-XXXX.spec.ts
+```
+
+Mỗi lần gọi `npx playwright test --project=chromium` là một lần khởi động Playwright (~5–10 giây) cộng
+một lần dựng browser. 20 case export mà verify từng cái là 20 lần khởi động, vài
+phút thuần chờ, không thêm thông tin gì so với chạy một lượt.
+
+Chỉ khi có case lệch mới quay lại chạy riêng nó (**luôn kèm đường dẫn file** — TC ID
+chỉ duy nhất trong một ticket):
+
+```bash
+cd telemax-e2e && npx playwright test --project=chromium tests/TLM-XXXX.spec.ts -g "TC-Y-NNN"
 ```
 
 Đối chiếu với kết quả Phase 1:
@@ -259,7 +276,7 @@ Sửa 2 lần vẫn không khớp thì dừng, giữ kết quả Phase 1, và gh
 - [ ] Mỗi test() có tiêu đề đúng dạng `TC-Y-NNN — <mô tả>`, đúng dấu ` — `
 - [ ] Case chỉ-xem đã gắn `{ tag: '@prod-safe' }`; case có ghi dữ liệu thì KHÔNG gắn
 - [ ] Header comment có ticket, file Excel, danh sách màn hình
-- [ ] **Đã chạy `cd telemax-e2e && npx playwright test tests/TLM-XXXX.spec.ts -g "..."` và kết quả khớp Phase 1**
+- [ ] **Đã chạy MỘT lệnh `npx playwright test --project=chromium tests/TLM-XXXX.spec.ts` cho cả file và kết quả khớp Phase 1**
 - [ ] Có comment Expected + assertion phản ánh đúng Expected đó
 - [ ] Locator theo thứ tự ưu tiên; selector tạm có đánh dấu TODO
 - [ ] Assertion là DƯƠNG khi Expected nói về sự hiện diện; phủ định chỉ khi Expected nói về sự vắng mặt

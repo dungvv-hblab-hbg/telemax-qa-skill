@@ -193,7 +193,19 @@ Sheet này là "phiếu bug" — điểm bàn giao người ↔ agent. Cột:
 · Bug ID/Ticket · Assignee · Fix Status`. Cột **Description** (E) và **Actual
 Result** (H) là chỗ ghi nội dung bug; validation Fix Status ở cột K.
 
-`scripts/write_defects.py` có 3 mode:
+`scripts/write_defects.py` có 5 mode:
+
+- `--mode cases [--round N] [--not-run-only]` — **đọc-only**, trả TỪNG test case đầy
+  đủ: `type` (phân nhánh UI/API/Manual), `precondition`, `steps`, `data`, `expected`,
+  `manual`/`data_req`, và Result của cả hai round. `test-runner` dùng nó làm **nguồn
+  duy nhất** thay vì tự viết openpyxl tạm — `Read` tool không mở được `.xlsx`.
+  `--not-run-only` bỏ case đã có `Pass`/`Fail` ở `--round`, phục vụ `RESUME`.
+
+- `--mode status` — **đọc-only**, không ghi gì, không tạo `.bak`. Trả JSON: phân bố
+  Result của Round 1/2, số case đã có Pass/Fail (cho `RESUME`), `suggest_round` kèm
+  lý do, `data_req` và `manual` **gom theo điều kiện**, `ac_missing`, số dòng Defects.
+  Cổng đầu vào của `/qa-run` dùng đúng lệnh này thay vì tự viết openpyxl tạm — Read
+  tool không mở được `.xlsx`, nên không có nó thì cổng hay bị bỏ qua.
 
 - `--mode fill` — với case Fail/Blocked ở **round mới nhất có kết quả**, APPEND
   dòng Defects; agent điền Actual từ log. Tự bỏ qua: case đã có Bug ID, case đã có

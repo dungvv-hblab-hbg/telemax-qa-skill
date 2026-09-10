@@ -15,12 +15,12 @@ Kiểm từng cái rồi báo tôi trạng thái **trước khi chạy bất c�
 | MCP Playwright | có `.mcp.json` ở gốc repo với entry `playwright` không, và `Playwright:browser_*` có trong danh sách tool không |
 | **`.mcp.json` khớp `qa-config.md` chưa** | so từng tham số, xem mục riêng bên dưới |
 | **Có server `playwright` trùng ở scope khác không** | `claude mcp list` — xem mục 2c |
-| Project e2e | `telemax-e2e/playwright.config.ts` tồn tại không |
-| `.env` của e2e | `telemax-e2e/.env` tồn tại không |
+| **Project e2e** | xem mục 2d — dò trước, hỏi, rồi mới dựng. Đừng giả định `telemax-e2e/` tồn tại |
+| `.env` của e2e | `<project e2e>/.env` tồn tại không (biết đường dẫn sau mục 2d) |
 | `qa-config.md` | còn dòng nào `CHƯA ĐIỀN` không |
 | **Python + openpyxl** | `bash .claude/scripts/qa-py.sh -c "import openpyxl, sys; print(sys.executable)"` |
 | **LibreOffice** (cho `recalc.py`) | `which soffice \|\| ls /Applications/LibreOffice.app 2>/dev/null` |
-| **Session code e2e** | `ls telemax-e2e/playwright/.auth/user.json` |
+| **Session code e2e** | `ls <project e2e>/playwright/.auth/user.json` |
 | **Postman collection** | `ls tests/postman/telemax.postman_collection.json` — đường dẫn khai ở `qa-config.md` |
 
 Cái nào đã có thì bỏ qua, đừng cài đè.
@@ -49,10 +49,11 @@ vì tạo thêm cái mới.
 **a. Tải trình duyệt cho Playwright** (~115MB, chỉ ghi vào cache của Playwright):
 
 ```bash
-cd telemax-e2e && npm install && npx playwright install chromium
+cd <project e2e> && npm install && npx playwright install chromium
 ```
 
-Chạy trong container hoặc CI thì cần thêm `npx playwright install-deps chromium`.
+Đường dẫn project biết được sau mục 2d. Chạy trong container/CI thì cần thêm
+`npx playwright install-deps chromium`.
 
 **b. Đăng ký MCP Playwright** — chỉ chạy khi `.mcp.json` **chưa có** entry `playwright`:
 
@@ -69,6 +70,42 @@ Sau khi đăng ký, kiểm bằng `/mcp`. Tool `Playwright:browser_*` chưa xu�
 thì khởi động lại session Claude Code — server MCP mới thường chỉ được nạp lúc khởi
 động.
 
+## 2d. Project e2e — dò, HỎI, rồi mới dựng
+
+`install.sh` **không copy project e2e nữa** (mặc định). Project e2e phụ thuộc app
+thật — URL, form đăng nhập, tên biến môi trường, dữ liệu mẫu. Bê nguyên project của
+app khác sang thì mọi selector đều sai và `npm run check` đỏ ngay từ phút đầu.
+
+Áp `skill: e2e-scaffold`. Nó lo phần dò và phần khuôn; **phần hỏi là của tôi và bạn**
+— bạn là command, chờ người dùng được, agent thì không.
+
+**Bước 1 — dò trước, đừng hỏi thứ đọc được từ repo.** Chạy khối lệnh dò trong skill,
+rồi báo tôi đúng bốn điều: đã có Playwright chưa · có framework e2e khác không · có
+phải app web không · URL đoán được là gì.
+
+**Bước 2 — hỏi tôi MỘT lượt**, kèm nhánh bạn đề xuất và lý do:
+
+| Dò thấy | Đề xuất | Làm gì |
+|---|---|---|
+| Đã có `playwright.config.*` | **A** | **Vá** config sẵn có cho đủ 4 hàng rào (`grep: /@prod-safe/`, storageState tách staging↔prod, project staging có tên, artifact bật). Đưa tôi duyệt diff. **Không ghi đè** — config đó có thể đang chạy CI |
+| Chưa có, và là app web | **B** | Scaffold từ `assets/playwright.config.template.ts`, điền phần app-specific. Hỏi tôi thư mục đích (đề xuất `e2e/`), URL staging + prod, tiền tố biến môi trường |
+| Không phải app web, hoặc tôi chưa muốn dựng | **C** | Ghi `qa-config.md` mục Playwright `Trạng thái | KHÔNG DÙNG`. Nhánh UI sẽ bị skip như nhánh API khi chưa có Postman — **không chặn** `/qa-run` |
+| Có Cypress/Selenium/pytest, chưa có Playwright | **hỏi rõ** | Harness chỉ chạy được với Playwright (xem mục "Ranh giới" của skill). Hai lựa chọn: dựng Playwright song song bộ sẵn có (**B**), hay bỏ nhánh UI (**C**). **Đừng tự chọn thay tôi** |
+
+**Không đoán `PROD_BASE_URL`.** Không hỏi mật khẩu qua chat — credential chỉ vào
+`.env`, và `.env` phải nằm trong `.gitignore` trước khi tôi điền.
+
+**Bước 3 — chốt vào `qa-config.md`** mục Playwright: `Trạng thái` + `Thư mục project`
+đúng đường dẫn thật. Mọi chặng sau đọc từ đó, nên sai ở đây là sai suốt.
+
+**Bước 4 — nêu lệnh cài, chờ tôi duyệt**, đừng tự chạy:
+
+```bash
+cd <project e2e> && npm install && npx playwright install chromium
+```
+
+Nhánh **A** thì bỏ qua bước này nếu repo đã cài rồi.
+
 ## 1b. Ba thứ thiếu thì KHÔNG chặn, nhưng phải báo trước
 
 Đừng để tôi phát hiện ở phút thứ 11 của một chặng.
@@ -77,11 +114,17 @@ thì khởi động lại session Claude Code — server MCP mới thường ch�
   bằng Excel một lần. Báo cách cài: `brew install --cask libreoffice` ·
   `sudo apt install libreoffice-calc`. Không có thì `/qa-write-cases` chạy xong mới
   báo, sau khoảng 11 phút.
-- **`telemax-e2e/playwright/.auth/user.json` chưa có** → mọi lần `npx playwright test`
-  sẽ hỏng. Bảo tôi chạy `cd telemax-e2e && npm run auth:headed`.
+- **Session code e2e** — 2FA đang TẮT thì **không phải làm gì**: project `chromium`
+  khai `dependencies: ['setup']` nên Playwright tự đăng nhập trước mỗi lần chạy,
+  miễn `.env` có credential. 2FA BẬT thì bảo tôi chạy
+  `cd <project e2e> && npm run auth:headed` một lần.
 - **Postman collection chưa có** ở đường dẫn khai trong `qa-config.md` → đúng như
   Trạng thái `CHƯA CÓ`, nhánh API sẽ được skip. Xác nhận lại với tôi để tôi biết bộ
   case sắp tới không phủ API, thay vì phát hiện giữa `/qa-run`.
+
+> Phần chẩn đoán chi tiết (2b, 2c) cũng chạy được riêng bằng **`/qa-doctor`** —
+> đọc-only, không cài gì. Dùng nó khi repo đã cài xong mà thấy triệu chứng lạ,
+> thay vì mở lại cả command cài đặt này.
 
 ## 2c. Chỉ giữ MCP Playwright ở scope project
 
