@@ -2,7 +2,7 @@
 """
 write_defects.py — Quản lý sheet "Defects & Follow-ups" trong file test case.
 
-Ba chế độ, phục vụ luồng tạo bug có human-in-the-loop:
+Năm chế độ (xem `--mode`), phục vụ luồng tạo bug có human-in-the-loop:
 
 1) --mode fill      : SAU khi chạy test, với mỗi case Fail/Blocked ở sheet Test
    Cases, APPEND một dòng vào sheet Defects. Điền sẵn TC ID, Section, Title,

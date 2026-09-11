@@ -1,11 +1,10 @@
 ---
 name: checklist-format
 description: >-
-  Định dạng chuẩn cho "test-analysis checklist" của Telemax: cấu trúc A–H, đánh số
-  liên tục, nhãn nguồn, bảng AC, xuất ra FILE .md để người review duyệt trước khi
-  viết test case. Dùng khi cần trình bày kết quả phân tích ticket + code thành
-  checklist test — kể cả khi người dùng chỉ nói "phân tích ticket này", "cần test
-  những gì", "làm checklist test", hay đang ở bước chuẩn bị trước khi gen test case.
+  Dùng khi cần trình bày kết quả phân tích ticket + code của Telemax thành
+  test-analysis checklist cho người review duyệt — kể cả khi người dùng chỉ nói
+  "phân tích ticket này", "cần test những gì", "làm checklist test", hay đang ở
+  bước chuẩn bị trước khi gen test case.
 ---
 
 # Checklist-format
@@ -16,7 +15,7 @@ là của agent gọi skill này. Nhiệm vụ duy nhất của skill: đảm b�
 ra luôn đúng cấu trúc, đúng quy ước, để người review quét được một lượt và phản
 hồi bằng số thứ tự.
 
-Ví dụ một checklist hoàn chỉnh (rút gọn): [assets/example-checklist.md](assets/example-checklist.md).
+Ví dụ (rút gọn, **không có D6** — xem mục D6 bên dưới): [assets/example-checklist.md](assets/example-checklist.md).
 
 ## Chia mục C theo màn hình
 

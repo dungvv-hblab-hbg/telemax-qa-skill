@@ -9,14 +9,14 @@ import { VEHICLE } from '../fixtures/test-data';
  * MỘT FILE CHO MỘT TICKET. Tên file là mã ticket; toàn bộ case UI của ticket nằm
  * trong đây, kể cả khi ticket đụng nhiều màn hình (thêm describe, không thêm file).
  *
- *   npx playwright test tests/TLM-0000.spec.ts                 # cả ticket
- *   npx playwright test tests/TLM-0000.spec.ts -g "TC-A-001"   # một case
+ *   npx playwright test --project=chromium tests/TLM-0000.spec.ts                 # cả ticket
+ *   npx playwright test --project=chromium tests/TLM-0000.spec.ts -g "TC-A-001"   # một case
  *
  * Chạy theo TC ID thì LUÔN kèm đường dẫn file: TC ID chỉ duy nhất trong một ticket,
  * `-g "TC-A-001"` trần sẽ vớ phải case của ticket khác.
  *
  * Tên describe đặt theo màn hình và giữ nhất quán giữa các ticket, để chạy regression
- * theo màn hình xuyên ticket:  npx playwright test -g "Vehicle Detail"
+ * theo màn hình xuyên ticket:  npx playwright test --project=chromium -g "Vehicle Detail"
  *
  * KHÔNG login ở đây — session đã có sẵn qua storageState.
  *

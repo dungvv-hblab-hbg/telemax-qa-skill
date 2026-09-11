@@ -1,10 +1,7 @@
 ---
 name: testcase-template
 description: >-
-  Sinh file test case Excel chuẩn của Telemax từ checklist đã được review confirm:
-  clone template rỗng, đổ 14 cột vào sheet "Test Cases" (EN) theo quy ước ID từng
-  section, dịch sang "Test Cases_VN", và dựng sheet Traceability (AC → TC) để bắt
-  AC còn hở. Dùng khi cần biến checklist/phân tích test thành bộ test case Excel,
+  Dùng khi cần biến checklist đã review thành bộ test case Excel chuẩn của Telemax,
   viết test case cho một ticket, hay xuất test case ra file để chạy — kể cả khi
   người dùng chỉ nói "viết test case", "gen test case", "làm file test case cho
   ticket này".
@@ -158,7 +155,9 @@ Template có 3 data validation kiểu list, phủ tới row 306:
 
 - Cột C (Type): `UI,Validation,Boundary,Negative,Functional,Business rule,API`
 - Cột D (Priority): `High,Medium,Low`
-- Cột J & L (Result): `Pass,Fail,Blocked,Impact,Not Run`
+- Cột J & L (Result): `Pass,Fail,Blocked,Impact,Not Run` — `Impact` = *không chạy lại
+  nhưng bị ảnh hưởng bởi thay đổi chỗ khác, cần đánh giá* (LEGEND sheet Summary).
+  Nó KHÔNG sinh dòng Defects và không tính là đã chạy
 
 Giá trị đổ vào các cột này **phải nằm đúng trong danh sách** — sai một chữ (VD
 `Business Rule` viết hoa R, hay `NotRun` liền) sẽ vỡ validation. Khi đổ data bằng
@@ -225,12 +224,14 @@ Result** (H) là chỗ ghi nội dung bug; validation Fix Status ở cột K.
 3. **KHÔNG dùng "xoá dòng" làm tín hiệu từ chối.** Muốn nói "case này không tạo
    bug", đặt **Fix Status = "Won't fix"** (có sẵn trong dropdown cột K). Xoá dòng
    không giữ được ý định: case vẫn Fail và chưa có Bug ID nên lần fill sau nó quay lại.
+   Lưu ý ngược lại: `read` loại dòng có **BẤT KỲ** Fix Status nào, không riêng
+   `Won't fix` — chọn `Open` cũng là chặn tạo bug. Nêu nguyên văn giá trị đã chặn.
 
 Script tự tạo `<file>.bak` trước mọi lần ghi (tắt bằng `--no-backup`).
 
 ## Quy trình sinh file
 
-Phần cơ khí (clone template, đổ 12 cột, chèn divider, giữ dropdown, nới range
+Phần cơ khí (clone template, đổ 14 cột, chèn divider, giữ dropdown, nới range
 Summary, cập nhật section table, cập nhật Cover) đã đóng gói trong `scripts/build.py`.
 Ranh giới: **agent làm phần phán đoán** (nghĩ ra test case, gán Priority theo rủi ro,
 viết Expected khớp message ở D2, dịch VN) rồi đóng gói thành JSON; **script làm phần

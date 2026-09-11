@@ -36,9 +36,15 @@ result.json
 # venv chuẩn của harness, do /qa-setup tạo
 .claude/.venv/
 
+# cấu hình Claude Code riêng của từng máy — không commit vào repo sản phẩm
+.claude/settings.local.json
+
 # ── Node ───────────────────────────────────────────────────────────────
 node_modules/
-package-lock.json
+# CHỈ lockfile của project e2e — `package-lock.json` trần sẽ ignore cả lockfile
+# của chính app trong repo đích (và mọi package con của monorepo).
+telemax-e2e/package-lock.json
+e2e/package-lock.json
 
 # ── Python ─────────────────────────────────────────────────────────────
 __pycache__/

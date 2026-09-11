@@ -62,14 +62,14 @@ cùng một dữ liệu. Ngoại lệ duy nhất: cần xác nhận **một** c�
 ## Báo tiến trình (bắt buộc)
 
 ```bash
-bash .claude/scripts/qa-log.sh <TICKET> qa-analyze <bước>/3 "<đang làm gì>"
+bash .claude/scripts/qa-log.sh <TICKET> qa-analyze <bước>/3 "tổng hợp: <đang làm gì>"
 ```
 
 | Bước | Thông điệp |
 |---|---|
-| 1/3 | `đọc hai bản phân tích` |
-| 2/3 | `đối chiếu spec ↔ code` |
-| 3/3 | `dựng checklist & ghi file` |
+| 1/3 | `tổng hợp: đọc hai bản phân tích` |
+| 2/3 | `tổng hợp: đối chiếu spec ↔ code` |
+| 3/3 | `tổng hợp: dựng checklist & ghi file` |
 
 ## Circuit breaker
 Cùng một thao tác lỗi 3 lần liên tiếp → DỪNG, báo rõ tool nào lỗi và cần gì.

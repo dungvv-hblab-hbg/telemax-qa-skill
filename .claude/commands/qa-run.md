@@ -83,7 +83,7 @@ rõ mặc định đề xuất. Không bao giờ hỏi mật khẩu/token qua ch
    session thì đã tự khoá đường, và lối ra duy nhất là bắt tôi thoát Claude Code.
 
    ```bash
-   test -e .playwright-mcp-profile/SingletonLock && echo LOCKED || echo FREE
+   test -L .playwright-mcp-profile/SingletonLock && echo LOCKED || echo FREE
    ```
 
    - **`FREE`** (chưa tool MCP nào chạy trong session này) → chạy thẳng, **không cần

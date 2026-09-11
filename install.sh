@@ -53,7 +53,10 @@ if [ -d "$TARGET/.claude" ] && [ "$FORCE" != 1 ]; then
 fi
 run "mkdir -p '$TARGET/.claude'"
 run "cp -R '$SRC/.claude/.' '$TARGET/.claude/'"
-say ".claude/ -> đã copy"
+# settings.local.json là cấu hình riêng của MÁY người cài (plugin đang bật, server MCP
+# đã duyệt). Copy sang là ép nó cho người khác, và repo đích chưa chắc gitignore nó.
+run "rm -f '$TARGET/.claude/settings.local.json'"
+say ".claude/ -> đã copy (bỏ settings.local.json)"
 
 # ── .mcp.json ────────────────────────────────────────────────────────────
 if [ -f "$TARGET/.mcp.json" ]; then

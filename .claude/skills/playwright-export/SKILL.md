@@ -1,11 +1,9 @@
 ---
 name: playwright-export
 description: >-
-  Viết thao tác test UI **đã dò được qua MCP Playwright ở Phase 1** thành file .ts
-  tái dùng, đúng convention project telemax-e2e: cấu trúc file, thứ tự ưu tiên locator, gắn TC ID,
-  tái dùng session đăng nhập, assertion ánh xạ từ Expected Result. Dùng khi cần xuất
-  một luồng test UI thành code để chạy lại lần sau — kể cả khi người dùng nói "gen
-  file .ts", "export test này ra Playwright", "viết lại thành spec để tái dùng".
+  Dùng khi cần xuất một luồng test UI **đã dò được qua MCP Playwright ở Phase 1**
+  thành file .ts tái dùng để chạy lại lần sau — kể cả khi người dùng nói "gen file
+  .ts", "export test này ra Playwright", "viết lại thành spec để tái dùng".
 ---
 
 # Playwright-export
@@ -16,7 +14,7 @@ description: >-
 Phase 1; không có MCP thì không có gì để viết, và skill KHÔNG được bịa selector. Agent
 là bên kiểm và dừng — xem `test-runner`.
 
-Node + `@playwright/test`, và project `telemax-e2e` đã tồn tại với
+Node + `@playwright/test`, và project e2e đã tồn tại với
 `playwright.config.ts` + `auth.setup.ts`. Đường dẫn khai báo ở
 mục Playwright: `bash .claude/scripts/qa-config.sh playwright`.
 
@@ -48,7 +46,10 @@ hành vi luồng do agent thực thi trước khi gọi skill.
 Skill này chỉ lo Phase 2. Nó nhận mô tả thao tác (mở trang nào, click gì, kiểm
 gì) và xuất code; nó không tự mở trình duyệt hay dò selector.
 
-## Convention bắt buộc (bám project telemax-e2e)
+## Convention bắt buộc
+
+Các lệnh dưới viết `telemax-e2e` làm ví dụ. Thư mục thật đọc ở mục Playwright của
+`qa-config` — repo scaffold mới thường là `e2e/`.
 
 ### Định danh — convention BẮT BUỘC, không phải trang trí
 

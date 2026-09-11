@@ -10,7 +10,7 @@ bash .claude/scripts/smoke-scripts.sh
 ```
 
 
-Ba kịch bản đo xem harness có làm đúng thứ nó hứa không. Chưa có runner tự động;
+Năm kịch bản đo xem harness có làm đúng thứ nó hứa không. Chưa có runner tự động;
 chạy tay: mở một session Claude Code sạch trong repo, chạy `query`, rồi đối chiếu
 từng dòng `expected_behavior`.
 

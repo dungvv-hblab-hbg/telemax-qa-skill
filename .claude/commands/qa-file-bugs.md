@@ -58,7 +58,7 @@ ghi `.qa/$1/bugs-proposed.json`, rồi **kết thúc**. Nó không tạo gì c�
 | TC ID | Tiêu đề bug | Priority | Assignee đề xuất | Trùng? |
 |---|---|---|---|---|
 
-Nêu kèm: số dòng bị loại và lý do (`Won't fix`, đã có Bug ID, `[MANUAL]`), và **mọi
+Nêu kèm: số dòng bị loại và lý do (`Won't fix hoặc bất kỳ Fix Status nào khác`, đã có Bug ID, `[MANUAL]`), và **mọi
 bug nghi trùng** với bug đang mở trên ClickUp — với mỗi cái hỏi rõ tôi muốn **dùng ID
 cũ** hay **vẫn tạo mới**.
 

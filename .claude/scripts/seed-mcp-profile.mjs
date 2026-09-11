@@ -30,7 +30,26 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../..');          // .claude/scripts/ -> gốc repo
-const E2E = path.join(ROOT, 'telemax-e2e');
+
+// Thư mục project e2e KHÔNG cố định: `/qa-setup` (skill e2e-scaffold) để người dùng
+// chọn, và mặc định đề xuất là `e2e/`. Hardcode 'telemax-e2e' ở đây thì script chết
+// ngay ở repo đầu tiên chọn tên khác. Thứ tự: env -> dò playwright.config -> mặc định.
+function findE2E() {
+  if (process.env.QA_E2E_DIR) return path.resolve(ROOT, process.env.QA_E2E_DIR);
+  for (const d of fs.readdirSync(ROOT, { withFileTypes: true })) {
+    if (!d.isDirectory() || d.name === 'node_modules' || d.name.startsWith('.')) continue;
+    for (const ext of ['ts', 'js', 'mjs']) {
+      if (fs.existsSync(path.join(ROOT, d.name, `playwright.config.${ext}`))) {
+        return path.join(ROOT, d.name);
+      }
+    }
+  }
+  return path.join(ROOT, 'telemax-e2e');
+}
+const E2E = findE2E();
+const E2E_NAME = path.relative(ROOT, E2E) || 'telemax-e2e';
+// Tiền tố biến env cũng do e2e-scaffold đặt theo tên app (VD ACME_USER).
+const PFX = process.env.QA_ENV_PREFIX || 'TELEMAX';
 const PROFILE = path.join(ROOT, '.playwright-mcp-profile');
 const ENV_FILE = path.join(E2E, '.env');
 
@@ -39,8 +58,8 @@ function die(msg) {
   process.exit(1);
 }
 
-// Playwright nằm trong node_modules của telemax-e2e. Import ESM phân giải theo vị trí
-// FILE, không theo thư mục đang đứng — nên `cd telemax-e2e` KHÔNG đủ. Trỏ thẳng đường
+// Playwright nằm trong node_modules của project e2e. Import ESM phân giải theo vị trí
+// FILE, không theo thư mục đang đứng — nên `cd <project e2e>` KHÔNG đủ. Trỏ thẳng đường
 // dẫn tuyệt đối để script chạy được từ bất cứ đâu.
 const PW_ENTRY = path.join(E2E, 'node_modules', '@playwright', 'test', 'index.mjs');
 const PW_CJS = path.join(E2E, 'node_modules', '@playwright', 'test', 'index.js');
@@ -52,7 +71,7 @@ try {
 } catch (e) {
   die(
     `Không nạp được @playwright/test từ ${E2E}/node_modules.\n` +
-    `Chạy: cd telemax-e2e && npm install\nChi tiết: ${e.message}`
+    `Chạy: cd ${E2E_NAME} && npm install\nChi tiết: ${e.message}`
   );
 }
 
@@ -65,22 +84,63 @@ for (const line of fs.readFileSync(ENV_FILE, 'utf8').split('\n')) {
   if (m) env[m[1]] = m[2].trim().replace(/^["']|["']$/g, '');
 }
 
+// Selector form đăng nhập — app khác thì form khác. Khai ở `<project e2e>/.env`
+// (hoặc biến môi trường cùng tên); mặc định là form Telemax để repo này không phải
+// khai gì. Tiền tố chọn cách tìm: placeholder: (mặc định) · label: · testid: ·
+// text: · css: · role:<vai>/<tên>.
+function pick(key, fallback) {
+  return process.env[key] || env[key] || fallback;
+}
+const SEL = {
+  path:     pick('LOGIN_PATH', '/login'),
+  email:    pick('LOGIN_EMAIL', 'placeholder:Enter your email'),
+  password: pick('LOGIN_PASSWORD', 'placeholder:Enter your password'),
+  submit:   pick('LOGIN_SUBMIT', 'role:button/Login'),
+  twofa:    pick('LOGIN_2FA', 'role:heading/Two-Factor Authentication'),
+  remember: pick('LOGIN_REMEMBER', 'role:checkbox/Remember this device'),
+};
+
+function loc(page, spec) {
+  const m = spec.match(/^(placeholder|label|testid|text|css|role):([\s\S]*)$/);
+  const [kind, val] = m ? [m[1], m[2]] : ['placeholder', spec];
+  switch (kind) {
+    case 'label':  return page.getByLabel(val);
+    case 'testid': return page.getByTestId(val);
+    case 'text':   return page.getByText(val);
+    case 'css':    return page.locator(val);
+    case 'role': {
+      const i = val.indexOf('/');
+      return i < 0
+        ? page.getByRole(val.trim())
+        : page.getByRole(val.slice(0, i).trim(), { name: val.slice(i + 1) });
+    }
+    default:       return page.getByPlaceholder(val);
+  }
+}
+
 const prod = process.argv.includes('--prod');
 const base = prod
   ? env.PROD_BASE_URL
   : (env.BASE_URL || 'https://dashboard-stage.telemax.com.au');
-const user = prod ? env.TELEMAX_PROD_USER : env.TELEMAX_USER;
-const pass = prod ? env.TELEMAX_PROD_PASS : env.TELEMAX_PASS;
+const userKey = prod ? `${PFX}_PROD_USER` : `${PFX}_USER`;
+const passKey = prod ? `${PFX}_PROD_PASS` : `${PFX}_PASS`;
+const user = env[userKey];
+const pass = env[passKey];
 
-if (!base) die(`Thiếu ${prod ? 'PROD_BASE_URL' : 'BASE_URL'} trong telemax-e2e/.env`);
+if (!base) die(`Thiếu ${prod ? 'PROD_BASE_URL' : 'BASE_URL'} trong ${E2E_NAME}/.env`);
 if (!user || !pass) {
-  die(`Thiếu ${prod ? 'TELEMAX_PROD_USER / TELEMAX_PROD_PASS' : 'TELEMAX_USER / TELEMAX_PASS'} trong telemax-e2e/.env`);
+  die(`Thiếu ${userKey} / ${passKey} trong ${E2E_NAME}/.env`);
 }
 if (prod && /stage|staging|localhost/i.test(base)) die(`PROD_BASE_URL trông không giống production: ${base}`);
 
 // Profile đang bị MCP chiếm thì báo rõ, đừng để Chromium ném lỗi khó hiểu.
+// Chromium tạo SingletonLock là SYMLINK trỏ tới `<hostname>-<pid>`, và target đó
+// không tồn tại như một file. `existsSync` ĐI THEO symlink nên với link treo nó trả
+// false — guard này trước đây không bao giờ kích hoạt. `lstatSync` không đi theo.
 const LOCK = path.join(PROFILE, 'SingletonLock');
-if (fs.existsSync(LOCK)) {
+let locked = true;
+try { fs.lstatSync(LOCK); } catch { locked = false; }
+if (locked) {
   console.error(
     'Thư mục profile đang bị chiếm (có SingletonLock) — nhiều khả năng MCP đã mở browser.\n' +
     'Thoát Claude Code (hoặc đóng browser của MCP) rồi chạy lại script này TRƯỚC khi gọi tool MCP.'
@@ -88,21 +148,30 @@ if (fs.existsSync(LOCK)) {
   process.exit(1);
 }
 
-const ctx = await chromium.launchPersistentContext(PROFILE, {
-  headless: false,
-  ignoreHTTPSErrors: true,
-  viewport: null,
-  args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
-});
+let ctx;
+try {
+  ctx = await chromium.launchPersistentContext(PROFILE, {
+    headless: false,
+    ignoreHTTPSErrors: true,
+    viewport: null,
+    args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
+  });
+} catch (e) {
+  die(
+    `Không mở được profile ${PROFILE}.\n` +
+    'Nhiều khả năng MCP đang giữ nó — thoát Claude Code rồi chạy lại script này ' +
+    `TRƯỚC khi gọi tool MCP.\nChi tiết: ${e.message}`
+  );
+}
 
 try {
   const page = ctx.pages()[0] ?? (await ctx.newPage());
-  await page.goto(`${base}/login`, { timeout: 120_000 });
+  await page.goto(`${base}${SEL.path}`, { timeout: 120_000 });
 
   // Profile có sẵn session thì app tự chuyển vào trong. Báo RIÊNG trạng thái này —
   // gộp chung với LOGGED_IN sẽ che mất lỗi ở phần điền form: script in "đăng nhập
   // thành công" trong khi chưa hề gõ ký tự nào.
-  const email = page.getByPlaceholder('Enter your email');
+  const email = loc(page, SEL.email);
   const onLoginForm = await email
     .waitFor({ state: 'visible', timeout: 20_000 })
     .then(() => true)
@@ -110,7 +179,10 @@ try {
 
   if (!onLoginForm) {
     if (/login|signin/i.test(new URL(page.url()).pathname)) {
-      throw new Error('Đang ở /login nhưng không thấy ô email — trang chưa render xong hoặc form đã đổi.');
+      throw new Error(
+        `Đang ở ${SEL.path} nhưng không thấy ô email (${SEL.email}) — trang chưa ` +
+        'render xong, hoặc form đã đổi và LOGIN_EMAIL trong .env chưa cập nhật.'
+      );
     }
     console.log(`ALREADY_LOGGED_IN url=${new URL(page.url()).pathname}`);
     await ctx.close();
@@ -124,14 +196,14 @@ try {
   await email.click();
   await email.pressSequentially(user, { delay: 30 });
 
-  const password = page.getByPlaceholder('Enter your password');
+  const password = loc(page, SEL.password);
   await password.click();
   await password.pressSequentially(pass, { delay: 30 });
   await password.blur();
 
   // Script này không chạy trong test runner nên không dùng `expect`. Poll thủ công để
   // khi hỏng thì báo đúng nguyên nhân thay vì nuốt vào timeout của click().
-  const loginButton = page.getByRole('button', { name: 'Login' });
+  const loginButton = loc(page, SEL.submit);
   const deadline = Date.now() + 15_000;
   let enabled = false;
   while (Date.now() < deadline) {
@@ -140,21 +212,22 @@ try {
   }
   if (!enabled) {
     throw new Error(
-      'Nút Login vẫn disabled sau 15s. Form không nhận giá trị vừa gõ — kiểm xem ô ' +
-      'email/password có đổi placeholder không, hoặc trang có validate thêm gì không.'
+      `Nút submit (${SEL.submit}) vẫn disabled sau 15s. Form không nhận giá trị vừa ` +
+      'gõ — kiểm LOGIN_EMAIL / LOGIN_PASSWORD / LOGIN_SUBMIT trong .env có còn khớp ' +
+      'form không, hoặc trang có validate thêm gì không.'
     );
   }
   await loginButton.click();
 
-  const twoFactor = page.getByRole('heading', { name: /Two-Factor Authentication/i });
+  const twoFactor = loc(page, SEL.twofa);
   if (await twoFactor.isVisible({ timeout: 15_000 }).catch(() => false)) {
-    const remember = page.getByRole('checkbox', { name: /Remember this device/i });
+    const remember = loc(page, SEL.remember);
     if (await remember.isVisible().catch(() => false)) await remember.check();
     console.log('2FA_REQUIRED');   // agent thấy dòng này thì nhường quyền cho người dùng
   }
 
-  await page.waitForURL((u) => !/login|signin/i.test(u.pathname), { timeout: 300_000 });
-  const pwCount = await page.getByPlaceholder('Enter your password').count();
+  await page.waitForURL((u) => u.pathname !== SEL.path && !/login|signin/i.test(u.pathname), { timeout: 300_000 });
+  const pwCount = await loc(page, SEL.password).count();
   console.log(`LOGGED_IN url=${new URL(page.url()).pathname} passwordFields=${pwCount}`);
 } catch (e) {
   console.error(
