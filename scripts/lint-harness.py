@@ -81,7 +81,7 @@ for path in sorted(glob.glob(".claude/agents/*.md") + glob.glob(".claude/command
         err(f"{path}: frontmatter không parse được — {e}")
 
 # ── 3. Link tương đối ─────────────────────────────────────────────────────
-md_files = glob.glob("**/*.md", recursive=True)
+md_files = glob.glob("**/*.md", recursive=True) + glob.glob(".claude/**/*.md", recursive=True)
 for path in md_files:
     if "node_modules" in path:
         continue
@@ -145,6 +145,9 @@ except Exception as e:
 PW_RE = re.compile(r"(?:npx |\"|\s)playwright test(?![\w-])")
 for path in (glob.glob(".claude/**/*.md", recursive=True)
              + glob.glob(".claude/**/*.ts", recursive=True)
+             # spec thật + spec mẫu: file mẫu là thứ mọi ticket mới copy header từ đó
+             + [p for p in glob.glob("telemax-e2e/**/*.ts", recursive=True)
+                if "node_modules" not in p]
              + ["telemax-e2e/package.json", "docs/TESTING.md", "telemax-e2e/README.md"]):
     if not os.path.exists(path):
         continue

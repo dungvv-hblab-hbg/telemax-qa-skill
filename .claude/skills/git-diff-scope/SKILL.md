@@ -112,3 +112,17 @@ XEM còn hơn bỏ sót**. Bỏ sót một thay đổi hành vi nguy hiểm hơn
 vô hại.
 
 > Bộ quy ước này bổ sung khi gặp loại file đặc thù Telemax chưa liệt kê.
+
+## Tự kiểm
+
+- [ ] Base là **`stage`** (nhánh build ra dashboard-stage), không phải `dev`/`master`
+- [ ] Đã `git fetch origin <base>` trước khi diff — ref local cũ cho diff sai, im lặng
+- [ ] Dùng **ba chấm** `origin/stage...<branch>` (so với merge-base), không phải hai chấm
+- [ ] Ticket ID do người dùng xác nhận; suy từ tên nhánh thì đã hỏi lại
+- [ ] Không tìm thấy commit → **đã hỏi** code chưa xong hay ticket không đụng code,
+      không tự kết luận và không tự bỏ mục G
+- [ ] Chỉ đọc file tầng 1 trả về, không quét cả repo, không dính ticket khác
+- [ ] `appsettings*.json` và file test có sẵn **không** bị bỏ qua
+- [ ] Migration chỉ bỏ khi tự sinh thuần; đổi ràng buộc (not-null, unique, default) thì xem
+- [ ] Phân vân thì nghiêng về XEM, không bỏ sót
+- [ ] Cột "Vùng bị đụng" của mục G viết tên chức năng người dùng hiểu, tên kỹ thuật trong ngoặc

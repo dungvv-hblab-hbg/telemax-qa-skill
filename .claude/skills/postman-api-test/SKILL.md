@@ -1,11 +1,9 @@
 ---
 name: postman-api-test
 description: >-
-  Khớp các API cần test với bộ Postman collection sẵn có của team, chạy CHỌN LỌC
-  bằng newman theo đúng scope ticket, rồi đọc kết quả pass/fail kèm status code và
-  body lỗi thật để làm Actual Result. Dùng khi cần test API cho một ticket, kiểm
-  endpoint bị ảnh hưởng bởi thay đổi code, hay chạy lại API test — kể cả khi người
-  dùng nói "test API cho ticket này", "chạy API test", "kiểm endpoint X".
+  Dùng khi cần test API cho một ticket bằng bộ Postman collection sẵn có của team,
+  kiểm endpoint bị ảnh hưởng bởi thay đổi code, hay chạy lại API test — kể cả khi
+  người dùng nói "test API cho ticket này", "chạy API test", "kiểm endpoint X".
 ---
 
 # Postman-api-test

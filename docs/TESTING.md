@@ -19,8 +19,8 @@ bắt được trong 30 giây.
 bash .claude/scripts/smoke-scripts.sh
 ```
 
-Chạy được ngay, không cần ticket, không cần MCP, không gọi Claude. Nó kiểm 9 hành vi
-mà nếu vỡ thì cả luồng sai âm thầm:
+Chạy được ngay, không cần ticket, không cần MCP, không gọi Claude. Nó kiểm 12 nhóm
+hành vi mà nếu vỡ thì cả luồng sai âm thầm:
 
 1. `build.py` trên input hợp lệ → exit 0, `total_cases` đúng
 2. TC ID trùng → exit 1 **và không sinh file** (nếu sinh file là hàng rào đã thủng)
@@ -31,11 +31,14 @@ mà nếu vỡ thì cả luồng sai âm thầm:
 7. **Case `[MANUAL]` không đẻ ra dòng defect** ← case quan trọng nhất
 8. `Won't fix` loại dòng khỏi danh sách tạo bug
 9. `writeback` khoá theo TC ID, ghi Bug ID vào **cả hai** sheet
+10. `--mode status` đọc-only: phân bố Result, `suggest_round`, `ac_missing`
+11. `--mode cases` trả đủ precondition/steps/data/expected, `--not-run-only` lọc đúng
+12. `qa-state.sh`: journal vs artifact tách bạch, ghi nguyên tử, chặng sai bị từ chối
 
 Không có LibreOffice thì bước 4 tự SKIP, các bước còn lại vẫn chạy.
 
-**Đọc kết quả:** exit 0 chưa đủ, phải đọc cả các dòng in trực tiếp — vài assertion in
-`PASS`/`FAIL` ra stdout mà không cộng vào bộ đếm.
+**Đọc kết quả:** exit 0 là đủ. Script tự chạy lại chính mình một lượt, tee ra log rồi
+soi `^  FAIL` — nên các assertion in thẳng ra stdout cũng làm đỏ exit code.
 
 Sửa `assets/template.xlsx` xong mà quên chạy lại tầng này là rủi ro lớn nhất: template
 là chỗ dễ vỡ lặng lẽ nhất (merge cell, style rác, data validation bị mất).
@@ -87,7 +90,7 @@ index Postgres hoạt động") — không skill nào của harness được n�
 
 ## Tầng 2 — Test từng chặng
 
-Chạy 4 file trong `evals/`. Cách chạy: mở session sạch, chạy `query` trong file, rồi
+Chạy 5 file trong `evals/`. Cách chạy: mở session sạch, chạy `query` trong file, rồi
 **đối chiếu từng dòng `expected_behavior`**, đánh dấu đạt/không đạt.
 
 | File | Chặng |

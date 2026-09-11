@@ -26,11 +26,12 @@ Các kiểm này độc lập nhau, nên phát trong cùng một message, đừn
 | Project e2e tồn tại thật | `ls <thư mục khai trong qa-config>/playwright.config.ts` |
 | `.env` của e2e | `ls <thư mục e2e>/.env` |
 | Postman collection | `bash .claude/scripts/qa-config.sh postman` rồi `ls` đường dẫn khai báo |
-| Profile MCP có bị chiếm | `test -e .playwright-mcp-profile/SingletonLock && echo LOCKED \|\| echo FREE` |
+| Profile MCP có bị chiếm | `test -L .playwright-mcp-profile/SingletonLock && echo LOCKED \|\| echo FREE` |
 | MCP Playwright trong danh sách tool | có `Playwright:browser_*` không |
 | Trùng scope MCP | `claude mcp list` |
 | `.mcp.json` khớp qa-config | `cat .mcp.json` — so từng tham số |
 | Connector OAuth | có `ClickUp:*` và `Figma:*` trong danh sách tool không |
+| Connector Drive | có tool Drive nào không — không có thì `/qa-file-bugs` chỉ bỏ bước upload, không phải lỗi |
 
 ## 2. Ba bệnh hay gặp — chẩn cho đúng, đừng đoán
 

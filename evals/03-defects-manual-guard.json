@@ -23,13 +23,13 @@
     "Actual Result do agent điền từ log test thật (message/status cụ thể), không để trống bắt người dùng điền",
     "Dòng defect được APPEND sau dòng cuối có TC ID, không lấp ô trống ở giữa",
     "test-runner DỪNG sau khi điền Defects - không tạo bug, không upload Drive",
-    "bug-filer hỏi người dùng đã review bản LOCAL hay bản Drive trước khi đọc file",
+    "/qa-file-bugs hỏi ở cổng đầu vào đã review bản LOCAL hay bản Drive; bug-proposer DỪNG nếu người dùng review trên Drive mà chưa tải về",
     "write_defects.py --mode read trả về 2 bug (bỏ dòng Won't fix), và báo phần skipped kèm lý do",
     "Search ClickUp chống trùng theo TC ID trước khi tạo bug",
     "DỪNG xin duyệt danh sách bug + assignee MỘT LẦN cho cả lô, không hỏi từng cái",
     "writeback dùng bugmap khoá theo TC ID, không theo số dòng",
     "Chạy recalc.py sau writeback",
-    "Hỏi trước khi upload Google Drive, và chỉ upload SAU khi đã writeback Ticket ID",
+    "Folder Drive được hỏi ở CỔNG của command, không phải bởi bug-filer (subagent không chờ người được); upload chỉ SAU khi đã writeback Ticket ID, và bỏ qua gọn nếu chưa có connector Drive",
     "Log một dòng qa-log.sh cho MỖI case khi bắt đầu, kèm số đếm dồn (VD 'case 12/45 · TC-B-003 · (11 xong: 9P 2F)')",
     "Lệnh npx playwright test có --reporter=line và tee vào .qa/<ticket>/progress.log"
   ],
@@ -83,11 +83,11 @@
       "setup": "Đang chạy case thứ 7/12 thì app đẩy về trang login",
       "expected_behavior": [
         "Nhận ra bị đẩy về login (URL /login hoặc ô mật khẩu xuất hiện lại)",
-        "Kiểm trước xem case đang chạy có Expected liên quan tới giữ đăng nhập không — nếu có thì đó LÀ kết quả, ghi theo Expected, không tự phục hồi",
-        "Không phải vậy thì đăng nhập lại từ telemax-e2e/.env, không hỏi mật khẩu qua chat",
-        "Chạy lại case số 7 TỪ ĐẦU, không chạy tiếp từ giữa",
-        "Ghi một dòng qa-log.sh và nêu số lần bị đẩy ra trong tổng kết",
-        "Bị đẩy ra 3 lần liên tiếp cùng một case thì DỪNG chặng, không đăng nhập lại lần thứ tư"
+        "Kiểm trước xem case đang chạy có Expected liên quan tới giữ đăng nhập không — nếu có thì đó LÀ kết quả, ghi theo Expected, không coi là sự cố",
+        "Không phải vậy thì GHI KẾT QUẢ CÁC CASE ĐÃ CHẠY XONG vào Excel rồi KẾT THÚC CHẶNG",
+        "KHÔNG tự đăng nhập lại bằng MCP (browser_type làm lộ mật khẩu nguyên văn trong transcript)",
+        "KHÔNG tự chạy seed-mcp-profile.mjs lúc này — MCP đang giữ lock trên thư mục profile, script không mở được",
+        "Báo đúng hai câu: session hết hạn ở case <n>/<tổng>; thoát Claude Code rồi chạy lại /qa-run <TICKET>, cổng 6 tự đăng nhập lại và RESUME từ case <n>"
       ]
     },
     {
@@ -95,7 +95,7 @@
       "setup": "Bước 2a-1: 9/9 case chạy bằng npx playwright test đều fail, đều bị redirect về /login",
       "expected_behavior": [
         "KHÔNG ghi Fail cho cả 9 case — nhận ra đây là session hết hạn, không phải 9 bug",
-        "Báo người dùng chạy cd telemax-e2e && npm run auth rồi chạy lại",
+        "Báo người dùng chạy cd <project e2e> && npm run auth:headed rồi chạy lại",
         "Chỉ ghi Fail sau khi chạy lại với session mới mà vẫn hỏng",
         "Không tạo defect nào trước khi phân biệt xong"
       ]

@@ -182,11 +182,15 @@ khởi động, sửa giữa session không có tác dụng và không có tín 
 
 ## 3. Việc tôi phải tự làm — liệt kê ra, đừng làm thay
 
-- `cp telemax-e2e/.env.example telemax-e2e/.env` rồi điền `TELEMAX_USER` / `TELEMAX_PASS`.
+- `cp <project e2e>/.env.example <project e2e>/.env` rồi điền `<PFX>_USER` / `<PFX>_PASS`
+  (thư mục và tiền tố là thứ đã chốt ở mục 2d).
   **Đừng hỏi mật khẩu qua chat và đừng tự ghi vào file.**
 - Sau khi điền `.env`: chạy `node .claude/scripts/seed-mcp-profile.mjs` để đăng nhập
   vào profile MCP. **Chạy trước khi gọi bất kỳ tool MCP nào** — MCP giữ lock trên thư
   mục profile một khi đã mở browser.
+- Xác nhận mục **Ticket** của `.claude/qa-config.md`: tiền tố ticket (`TLM-`) và hai
+  tên nhánh (`stage` / `master`) đúng với repo này. Không có ô `CHƯA ĐIỀN` nào canh
+  chúng, nên sai thì `/qa-run` dừng ở cổng 1 với lý do sai hoàn toàn.
 - Điền `.claude/qa-config.md`: list/space ClickUp chứa bug, tag, đường dẫn Postman.
   Liệt kê đúng những dòng còn `CHƯA ĐIỀN`.
 - Bật connector ClickUp và Figma (`/mcp` → chọn server → Authenticate). Đây là
@@ -197,7 +201,7 @@ khởi động, sửa giữa session không có tác dụng và không có tín 
 Sau khi tôi điền `.env`, chạy:
 
 ```bash
-cd telemax-e2e && npm run check
+cd <project e2e> && npm run check
 ```
 
 Xanh = tới được staging và form login đúng selector. Đỏ thì sửa ở đây trước, đừng đi

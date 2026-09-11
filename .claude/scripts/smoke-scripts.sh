@@ -2,7 +2,7 @@
 # smoke-scripts.sh — Regression test cho tầng script của harness.
 #
 # Không cần MCP, không cần ticket thật, không gọi Claude. Chạy được ở CI.
-# Kiểm 9 hành vi mà nếu vỡ thì cả luồng QA sai âm thầm.
+# Kiểm 12 nhóm hành vi mà nếu vỡ thì cả luồng QA sai âm thầm.
 #
 #   bash .claude/scripts/smoke-scripts.sh
 #
@@ -12,6 +12,21 @@
 # Exit 0 = tất cả xanh. Exit 1 = có case đỏ (in rõ case nào).
 
 set -uo pipefail
+
+# Phần lớn assertion nằm trong heredoc Python và chỉ in "  FAIL ..." — chúng không
+# cộng vào $FAIL nên trước đây CI xanh dù hàng rào đã thủng. Chạy lại chính mình một
+# lần, tee ra log, rồi soi log: tiến trình con đã thoát hẳn nên không có race.
+if [ -z "${SMOKE_TEED:-}" ]; then
+  _log="$(mktemp)"
+  SMOKE_TEED=1 bash "$0" "$@" 2>&1 | tee "$_log"
+  _rc=${PIPESTATUS[0]}
+  if grep -q '^  FAIL' "$_log"; then
+    echo "CÓ DÒNG FAIL IN TRỰC TIẾP (xem ở trên) — $(grep -c '^  FAIL' "$_log") dòng"
+    _rc=1
+  fi
+  rm -f "$_log"
+  exit $_rc
+fi
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../skills/testcase-template" && pwd)"
 WORK="$(mktemp -d)"
@@ -248,7 +263,5 @@ PY
 
 # ── Kết ─────────────────────────────────────────────────────────────────────
 echo
-INLINE_FAIL=0
-echo "Tổng: $PASS pass / $FAIL fail (chưa tính các dòng PASS/FAIL in trực tiếp ở trên)"
+echo "Tổng (đếm bằng bash): $PASS pass / $FAIL fail — các dòng FAIL in trực tiếp được soi ở lượt ngoài"
 if [ $FAIL -gt 0 ]; then echo "CÓ CASE ĐỎ"; exit 1; fi
-echo "Xanh. Đọc lại các dòng in trực tiếp để chắc không có FAIL nào."

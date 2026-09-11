@@ -36,7 +36,8 @@ Chờ tôi trả lời xong mới gọi agent. Đừng đoán thay tôi.
    - Tôi chọn tự tạo → dừng ở đây, không phân tích. Tôi sẽ quay lại với mã ticket.
 
    **Chỉ khi tôi đã nghe nhắc mà vẫn nói rõ là cứ chạy không cần ticket** thì mới đi
-   tiếp: dùng ID tạm `TMP-<slug-tính-năng>` cho thư mục `.qa/`, mọi dòng checklist
+   tiếp: dùng ID tạm `TMP-<slug-tính-năng>` cho thư mục `.qa/` **và thay cho mọi `$1`
+   ở phần dưới** (`$1` rỗng làm `qa-state.sh` exit 2), mọi dòng checklist
    lấy từ nội dung dán gắn nhãn `[Chat]`, mục A ghi rõ chưa có ticket. Nêu một lần
    ba thứ sẽ mất — không đối chiếu lại được spec gốc, bug không link ngược về ticket,
    người khác không mở lại được nguồn — rồi tôn trọng quyết định của tôi, đừng nhắc

@@ -62,6 +62,7 @@ cũ rồi ghi kết quả cho ticket mới — sai âm thầm, vì test vẫn ch
 | Map priority | test case `High` → ClickUp `High`; `Medium` → `Normal`; `Low` → `Low`. Sửa nếu team có thang riêng |
 | Rule assign | đề xuất từ commit đụng file lỗi, **chờ người dùng duyệt** trước khi gán |
 | Ngôn ngữ bug | tiếng Anh (cùng ngôn ngữ sheet "Test Cases" EN) |
+| Connector Google Drive | `CHƯA ĐIỀN` — harness **không** tự bật được. Chưa có thì `/qa-file-bugs` bỏ bước upload và dùng fallback đính file vào task ClickUp |
 
 Tạo bug vào nhầm list là rác cho người khác dọn. Còn `CHƯA ĐIỀN` thì dừng và hỏi.
 
@@ -82,6 +83,7 @@ Tạo bug vào nhầm list là rác cho người khác dọn. Còn `CHƯA ĐIỀ
 | Tiết kiệm token khi chụp nhiều | Thêm `--image-responses omit` vào args: ảnh vẫn được LƯU nhưng không nạp vào context. Đổi lại agent mất khả năng kiểm bằng mắt — chỉ bật khi case không cần đối chiếu hình ảnh |
 | Session của MCP | `.playwright-mcp-profile/` (khai báo bằng `--user-data-dir` trong `.mcp.json`, đã gitignore). **Sống qua các lần chạy** — đăng nhập một lần dùng mãi tới khi hết hạn. Không khai báo thì MCP tạo thư mục tạm và mất session sau mỗi lần khởi động lại |
 | Session của code | `telemax-e2e/playwright/.auth/user.json`, tạo bằng `npm run auth:headed`. **Tách biệt** với session MCP — hai đường chạy, hai session |
+| Selector form đăng nhập | `LOGIN_PATH` · `LOGIN_EMAIL` · `LOGIN_PASSWORD` · `LOGIN_SUBMIT` · `LOGIN_2FA` · `LOGIN_REMEMBER` trong `<project e2e>/.env` — bỏ trống thì script dùng mặc định của form Telemax. Tiền tố: `placeholder:` (mặc định) · `label:` · `testid:` · `text:` · `css:` · `role:<vai>/<tên>`. Khuôn và ví dụ ở `.env.example` |
 | Tài khoản đăng nhập | `TELEMAX_USER` / `TELEMAX_PASS` trong `telemax-e2e/.env`. **KHÔNG điền form bằng MCP** — `browser_type({text: "<mật khẩu>"})` để lộ mật khẩu nguyên văn trong transcript. Đăng nhập bằng `node .claude/scripts/seed-mcp-profile.mjs`, script đọc `.env` trong tiến trình riêng |
 | Thứ tự seed | Chạy script **TRƯỚC khi gọi bất kỳ tool MCP nào**. MCP khởi động browser lười, nhưng đã khởi động rồi thì giữ lock trên thư mục profile và script sẽ không mở được |
 | Vận hành trình duyệt ở Phase 1 | Vòng đời một-phiên · ba mức reset · chờ bằng tín hiệu dương · xử khi bị đẩy về login — **[agents/reference/phase1-browser.md](agents/reference/phase1-browser.md)**. Để ở đó vì chỉ nhánh dò-bằng-MCP cần, còn mục này thì mọi chặng đều đọc |

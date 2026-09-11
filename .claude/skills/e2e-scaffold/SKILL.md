@@ -1,11 +1,9 @@
 ---
 name: e2e-scaffold
 description: >-
-  Quyết định và dựng project Playwright e2e cho một repo mới cài harness: dò xem repo
-  đã có sẵn e2e chưa, hỏi người dùng, rồi hoặc nối harness vào project sẵn có, hoặc
-  scaffold project mới theo app thật của repo đó, hoặc bỏ hẳn nhánh UI. Dùng khi chạy
-  /qa-setup trên repo mới, khi qa-config ghi Playwright Trạng thái `CHƯA CÓ`, hoặc khi
-  người dùng nói "cài e2e", "dựng project test UI", "repo này chưa có Playwright".
+  Dùng khi chạy /qa-setup trên một repo mới cài harness, khi qa-config ghi Playwright
+  Trạng thái `CHƯA CÓ`, hoặc khi người dùng nói "cài e2e", "dựng project test UI",
+  "repo này chưa có Playwright".
 ---
 
 # e2e-scaffold
@@ -88,7 +86,7 @@ khung. Nó đã mang sẵn cả bốn hàng rào trên; phần phải điền l�
 | Thư mục project | người dùng chọn (đề xuất `e2e/`) | Hỏi |
 | `BASE_URL` / `PROD_BASE_URL` | dò được ở bước 1, hoặc người dùng đưa | **Hỏi. Đừng đoán URL production** |
 | Tiền tố biến môi trường | tên repo/app (VD `ACME_USER`) | Hỏi |
-| Selector form đăng nhập | xem `reference/auth-setup.md` | Để `TODO` + `npm run check` đỏ có chủ đích |
+| Selector form đăng nhập | xem `reference/auth-setup.md`; điền luôn `LOGIN_*` vào `.env.example` | Để `TODO` + `npm run check` đỏ có chủ đích |
 
 Sinh: `playwright.config.ts` · `auth.setup.ts` · `auth.prod.setup.ts` ·
 `checks/setup-check.spec.ts` · `fixtures/test-data.ts` · `tsconfig.json` ·
@@ -97,6 +95,13 @@ Sinh: `playwright.config.ts` · `auth.setup.ts` · `auth.prod.setup.ts` ·
 
 Cách viết hai file `auth.*.setup.ts` — phần dễ sai nhất — ở
 [reference/auth-setup.md](reference/auth-setup.md). Đọc nó trước khi viết.
+
+`.claude/scripts/seed-mcp-profile.mjs` **không phải sửa code** — nó tự dò thư mục e2e
+qua `playwright.config.*`, lấy tiền tố biến ở `QA_ENV_PREFIX`, và đọc selector form
+đăng nhập từ `LOGIN_*` trong `.env`. Nhưng mặc định của `LOGIN_*` là form Telemax, nên
+**app khác thì phải khai `LOGIN_*` trong `.env.example`** cùng lúc viết `auth.setup.ts`
+— cùng một bộ selector, hai chỗ dùng. Bỏ sót thì script treo 15s rồi báo "nút submit
+vẫn disabled".
 
 **Không tự chạy `npm install`.** Nêu lệnh, chờ người dùng duyệt ở `/qa-setup`.
 

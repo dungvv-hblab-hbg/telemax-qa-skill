@@ -1,12 +1,8 @@
 ---
 name: clickup-bug-format
 description: >-
-  Khuôn nội dung và quy ước field cho bug tạo trên ClickUp từ test case fail: bốn
-  phần bắt buộc (Description, Steps to reproduce, Actual Result, Expected Result),
-  cách điền priority/status/list/assignee, chống trùng trước khi tạo, và ghi Bug ID
-  trả lại file test case. Dùng khi cần tạo bug hoặc defect trên ClickUp cho case
-  Fail/Blocked, hoặc khi người dùng nói "tạo bug cho case này", "file bug lên
-  ClickUp".
+  Dùng khi cần tạo bug hoặc defect trên ClickUp cho test case Fail/Blocked, hoặc khi
+  người dùng nói "tạo bug cho case này", "file bug lên ClickUp".
 ---
 
 # clickup-bug-format
