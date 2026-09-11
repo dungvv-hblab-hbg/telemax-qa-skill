@@ -45,16 +45,17 @@ Bước cố định của chặng này:
 
 | Bước | Thông điệp |
 |---|---|
-| 1/6 | `phân case vào nhánh UI/API/Manual, gom theo màn hình` |
-| 2/6 | `tra spec .ts đã có` |
-| 3/6 | `chạy nhánh UI` |
-| 4/6 | `chạy nhánh API` |
-| 5/6 | `ghi kết quả vào Excel` |
-| 6/6 | `điền sheet Defects + recalc + tổng kết` |
+| 1/7 | `phân case vào nhánh UI/API/Manual, gom theo màn hình` |
+| 2/7 | `tra spec .ts đã có` |
+| 3/7 | `chạy nhánh UI` |
+| 4/7 | `export spec .ts cho case dò mới + verify` |
+| 5/7 | `chạy nhánh API` |
+| 6/7 | `ghi kết quả vào Excel` |
+| 7/7 | `điền sheet Defects + recalc + tổng kết` |
 
 ### Log THEO TỪNG CASE, không chỉ theo bước
 
-Bước `3/6` và `4/6` có thể chạy hàng chục phút. Log ở mức bước thôi thì màn hình đứng
+Bước `3/7` và `5/7` có thể chạy hàng chục phút. Log ở mức bước thôi thì màn hình đứng
 im suốt thời gian đó và **trông y như treo** — người dùng không biết nên chờ hay nên
 kill.
 
@@ -62,7 +63,7 @@ kill.
 phút và không có kênh nào khác:
 
 ```bash
-bash .claude/scripts/qa-log.sh <TICKET> qa-run 3/6 "case 12/45 · TC-B-003 · đang chạy (11 xong: 9P 2F)"
+bash .claude/scripts/qa-log.sh <TICKET> qa-run 3/7 "case 12/45 · TC-B-003 · đang chạy (11 xong: 9P 2F)"
 ```
 
 Một dòng cho mỗi case, log ở **lúc bắt đầu** và gộp kết quả các case trước vào cùng
@@ -83,7 +84,7 @@ Ba chỗ khác cũng dễ bị tưởng là treo, log trước khi làm:
   `"đánh [MANUAL] cho 38 case: 13 thiếu Idle/Trip data, 25 chưa có spec"`.
 
 Và log mỗi lần bị đẩy về login giữa chừng:
-`bash .claude/scripts/qa-log.sh <TICKET> qa-run 3/6 "session hết hạn — kết thúc chặng"`
+`bash .claude/scripts/qa-log.sh <TICKET> qa-run 3/7 "session hết hạn — kết thúc chặng"`
 
 **Giá (đo thật, không ước):** một lệnh bash mỗi case tốn ~60 token nội dung, và
 ~99 token khi tính cả wrapper `tool_use`/`tool_result` — bộ 45 case là **~4.500
@@ -344,6 +345,41 @@ sẽ vớ phải case của ticket khác.
   mô tả chung chung. Một ảnh cho mỗi case ở đúng mốc assert — đừng chụp từng thao tác,
   vừa tốn vừa loãng.
 
+  **Khoanh vùng cần nhìn trước khi chụp — BẮT BUỘC với case Fail.** Ảnh nguyên màn
+  hình dashboard telematics dày đặc bảng và bản đồ; người đọc bug không biết phải
+  nhìn ô nào. Bơm viền vào đúng element mang Expected Result, rồi mới chụp:
+
+  ```
+  Playwright:browser_evaluate
+    target:  <ref/selector của element mang Expected — lấy từ browser_snapshot>
+    element: "<mô tả người đọc được, VD: ô Odometer trong bảng Devices>"
+    function: |
+      (element) => {
+        element.style.outline = '3px solid #ff0055';
+        element.style.outlineOffset = '2px';
+        element.scrollIntoView({ block: 'center' });
+      }
+  ```
+
+  Rồi `browser_take_screenshot` như trên. Ảnh giữ nguyên ngữ cảnh xung quanh, có ô
+  đỏ chỉ đúng chỗ sai — dev mở bug là thấy ngay, không phải đọc mô tả rồi tự dò.
+
+  Ba điều cần biết:
+
+  - **Viền sống tới hết case, không tự mất.** Element còn viền mà sang case sau chụp
+    tiếp thì ảnh case sau có ô đỏ sai chỗ. Gỡ trước khi rời case:
+    `(element) => { element.style.outline = ''; element.style.outlineOffset = ''; }`
+    — hoặc bỏ qua nếu case sau reload trang (reload xoá style inline).
+  - **Case Pass thì tuỳ.** Nó chỉ để đối chiếu, không ai soi. Thêm một tool call cho
+    mỗi case Pass là ~45 call thừa trên bộ 45 case. Chỉ khoanh khi Expected nằm ở
+    chỗ khó tìm bằng mắt.
+  - **Nhiều element cùng sai** → khoanh cả nhóm trong MỘT lần `browser_evaluate`
+    (`document.querySelectorAll(...).forEach(...)`), đừng gọi mỗi element một lần.
+
+  Cần **chỉ riêng element**, bỏ hết ngữ cảnh (VD message lỗi validate dưới một field)
+  → không cần bơm viền: truyền thẳng `target` vào `browser_take_screenshot`, ảnh cắt
+  đúng element đó. Dùng khi ngữ cảnh xung quanh không nói thêm được gì.
+
   Ảnh rơi vào `.playwright-mcp-output/` (khai báo `--output-dir` ở `.mcp.json`). Sau
   khi chạy XONG cả nhánh UI, gom về thư mục của ticket bằng **một lệnh duy nhất**:
 
@@ -371,9 +407,34 @@ sẽ vớ phải case của ticket khác.
   Timeout đã nới sẵn trong `.mcp.json` (`--timeout-action 30000`,
   `--timeout-navigation 120000`) — đợi hết timeout rồi mới kết luận là lỗi, đừng
   kích circuit breaker vì một lần chậm.
-- **Phase 2 — export:** gọi `skill: playwright-export` → ghi vào
-  `tests/TLM-XXXX.spec.ts` (một file cho cả ticket). File đã tồn tại thì **append case
-  mới vào đó**, không tạo file thứ hai.
+- **Phase 2 — export (bước `4/7`, BẮT BUỘC, không phải tuỳ chọn):** log một dòng
+  trước khi làm:
+
+  ```bash
+  bash .claude/scripts/qa-log.sh <TICKET> qa-run 4/7 "export <N> case dò mới ra spec .ts"
+  ```
+
+  Rồi gọi `skill: playwright-export` → ghi vào `tests/TLM-XXXX.spec.ts` (một file cho
+  cả ticket). File đã tồn tại thì **append case mới vào đó**, không tạo file thứ hai.
+
+  **Cổng kiểm — chạy SAU khi export, trước khi sang bước `6/7`:**
+
+  ```bash
+  ls telemax-e2e/tests/TLM-XXXX.spec.ts && \
+    grep -c "TC-" telemax-e2e/tests/TLM-XXXX.spec.ts
+  ```
+
+  Số `TC-` đếm được phải **≥ số case đã dò ở Phase 1**. Thiếu → export chưa xong,
+  quay lại làm nốt; **KHÔNG được ghi kết quả vào Excel khi cổng này chưa qua**.
+
+  Vì sao là cổng chứ không phải lời nhắc: bước này nằm ở phút thứ 30 của một chặng
+  dài, không ai ngồi nhìn, và bỏ nó thì mọi thứ vẫn ra số bình thường — Excel vẫn
+  đầy, ảnh vẫn có, tổng kết vẫn đẹp. Cái mất chỉ lộ ở round sau, khi `test-runner`
+  không tìm thấy spec và dò lại toàn bộ bằng MCP như chưa từng chạy. Tự khai "đã
+  export" trong tổng kết không thay được lệnh `ls`.
+
+  Không có case nào dò mới (mọi case UI chạy bằng spec sẵn ở 2a-1) → vẫn log bước
+  `4/7` với `"skip: không có case dò mới"`. Skip có lý do khác hẳn skip vì quên.
 - **Phase 3 — verify: MỘT lệnh cho cả file, sau khi export XONG hết.** Đừng chạy
   `-g "<TC ID>"` sau mỗi case:
 
