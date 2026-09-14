@@ -5,7 +5,8 @@
 #   bash .claude/scripts/qa-state.sh get  <ticket>
 #   bash .claude/scripts/qa-state.sh list
 #
-# Chặng:      analyze · apply-feedback · write-cases · run · file-bugs · verify-prod
+# Chặng:      analyze · apply-feedback · write-cases · run · file-bugs · verify-prod · retro
+#             (retro đứng cuối: nó rà lại các chặng trước, không chặn chặng nào)
 # Trạng thái: in_progress · done · failed · skipped
 #
 # File: .qa/<ticket>/state.json  (mỗi ticket một thư mục, đã có sẵn quy ước đó)
@@ -29,7 +30,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CMD="${1:-}"
 
-STAGES="analyze apply-feedback write-cases run file-bugs verify-prod"
+STAGES="analyze apply-feedback write-cases run file-bugs verify-prod retro"
 STATUSES="in_progress done failed skipped"
 
 usage() {
@@ -69,7 +70,7 @@ case "$CMD" in
     python3 - "$DIR/state.json" "$TICKET" "$STAGE" "$STATUS" "$NOTE" <<'PY'
 import json, os, sys, tempfile, datetime
 path, ticket, stage, status, note = sys.argv[1:6]
-STAGES = ["analyze", "apply-feedback", "write-cases", "run", "file-bugs", "verify-prod"]
+STAGES = ["analyze", "apply-feedback", "write-cases", "run", "file-bugs", "verify-prod", "retro"]
 
 data = {"ticket": ticket, "stages": {}}
 if os.path.exists(path):

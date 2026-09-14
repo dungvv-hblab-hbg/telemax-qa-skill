@@ -268,7 +268,11 @@ cp "$STATE_SH" "$SBOX/.claude/scripts/"
   bash .claude/scripts/qa-state.sh set TLM-0001 run done "sau khi hỏng" > /dev/null 2>&1
   echo $? > corrupt_rc.txt
   bash .claude/scripts/qa-state.sh set TLM-0001 khong-ton-tai done > /dev/null 2>&1
-  echo $? > badstage_rc.txt )
+  echo $? > badstage_rc.txt
+  # chặng retro (/qa-retro) — thêm sau, dễ quên một trong hai chỗ khai STAGES
+  bash .claude/scripts/qa-state.sh set TLM-0002 retro done "3 phát hiện" > /dev/null 2>&1
+  echo $? > retro_rc.txt
+  bash .claude/scripts/qa-state.sh get TLM-0002 > g2.json 2>&1 )
 python3 - "$SBOX" <<'PY'
 import json, os, sys
 s = sys.argv[1]
@@ -288,6 +292,12 @@ ck(g["artifacts"]["testcase_xlsx"] == [], "artifact không có thì báo không 
 ck(open(os.path.join(s, "corrupt_rc.txt")).read().strip() == "0",
    "state.json hỏng vẫn set được (tự dựng lại, không chặn công việc)")
 ck(open(os.path.join(s, "badstage_rc.txt")).read().strip() != "0", "chặng sai bị từ chối")
+# Hai chỗ khai STAGES (bash + python trong cùng file) phải khớp nhau. Khai thiếu một
+# chỗ thì `set` qua được nhưng stage_order sai, và /qa-status hiển thị lệch.
+ck(open(os.path.join(s, "retro_rc.txt")).read().strip() == "0", "chặng retro được chấp nhận")
+g2 = j("g2.json")
+ck(g2["state"]["stages"].get("retro", {}).get("status") == "done", "retro ghi được vào state.json")
+ck("retro" in g2["state"].get("stage_order", []), "retro có trong stage_order (khai đủ CẢ HAI chỗ)")
 PY
 
 # ── Kết ─────────────────────────────────────────────────────────────────────
