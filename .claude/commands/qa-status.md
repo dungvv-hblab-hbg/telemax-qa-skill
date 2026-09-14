@@ -65,7 +65,7 @@ ngang hàng rồi để tôi tự chọn.
 
 ### Có `$1` — chi tiết một ticket
 
-Bảng sáu chặng theo đúng thứ tự, mỗi chặng: trạng thái · thời điểm · ghi chú · artifact:
+Bảng bảy chặng theo đúng thứ tự, mỗi chặng: trạng thái · thời điểm · ghi chú · artifact:
 
 | # | Chặng | Trạng thái | Lúc | Artifact |
 |---|---|---|---|---|
@@ -87,7 +87,11 @@ Rồi **một dòng** kết luận: lệnh tiếp theo nên chạy, và vì sao.
 | `run: done` | Review sheet **Defects & Follow-ups** (bản LOCAL), rồi `/qa-file-bugs $1` |
 | `file-bugs: done` | Xong chặng staging. Sau khi deploy: `/qa-verify-prod $1` |
 | `verify-prod: done` | Ticket đã đi hết vòng |
+| `retro: done` | Đã có `retro-<ngày>.md`. Mở đọc — mục **High** là thứ cần sửa trước |
 | Bất kỳ chặng nào `failed` | Nêu ghi chú lỗi đã lưu, đề xuất chạy lại đúng chặng đó |
+
+`retro` là chặng **tuỳ chọn**: không có nó KHÔNG phải thiếu sót, đừng giục. Chỉ nhắc
+`/qa-retro $1` khi chặng `run` là `failed`, hoặc khi tôi hỏi vì sao lượt chạy kỳ lạ.
 
 Thiếu điều kiện môi trường (không phải trạng thái ticket) → trỏ sang **`/qa-doctor`**,
 đừng đoán.
