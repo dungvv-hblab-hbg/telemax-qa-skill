@@ -4,6 +4,7 @@
 - Khung tổng thể
 - `cover` — metadata sheet Cover
 - `acceptance_criteria` — nguồn sheet Traceability
+- `assumptions` — nguồn sheet Assumptions & Questions
 - `sections` / `cases` — nội dung test case
 - Ràng buộc validate (nguyên nhân exit code 1)
 - Ví dụ tối thiểu chạy được
@@ -16,6 +17,7 @@
 {
   "cover": { ... },
   "acceptance_criteria": [ ... ],
+  "assumptions": [ ... ],
   "sections": [ { "divider": "...", "cases": [ ... ] } ]
 }
 ```
@@ -48,6 +50,48 @@ Lấy từ **mục E2 (Bảng AC)** của checklist đã review. Tuỳ chọn, n
 
 Mã `id` phải khớp **chính xác** mã trong checklist và mã trong `acs` của từng
 case. Sai một chữ là AC bị báo `MISSING` dù thực ra đã phủ.
+
+## `assumptions` — nguồn sheet Assumptions & Questions
+
+Lấy từ **mục F (Điểm mờ / câu hỏi)** của checklist đã review. Tuỳ chọn về mặt schema,
+**bắt buộc trên thực tế**: mỗi câu hỏi mục F mà một test case dựa vào để viết Expected
+Result thì phải có **một dòng** ở đây.
+
+```json
+"assumptions": [
+  {
+    "ref": "#72",
+    "topic": "Report Period format",
+    "gap": "Ticket offers two formats, records no decision",
+    "assumption": "12-hour with AM/PM",
+    "question": "Which format is the pass criterion?",
+    "answer": "12-hour with AM/PM — confirmed by reviewer",
+    "date_closed": "2026-09-14"
+  }
+]
+```
+
+| Field | Bắt buộc | Ghi chú |
+|---|---|---|
+| `ref` | **có** | Số mục trong checklist, giữ nguyên dấu `#`, VD `"#72"` |
+| `topic` | **có** | Chủ đề ngắn |
+| `gap` | không | Spec hở chỗ nào |
+| `assumption` | **có** | Giả định đang dùng làm căn cứ cho Expected Result |
+| `question` | không | Câu hỏi cho BA/Dev |
+| `answer` | không | Câu trả lời khi đã chốt. Chưa chốt thì để trống |
+| `date_closed` | không | `YYYY-MM-DD`. Sai định dạng → exit 1 |
+
+**Marker trong Note: `[GĐ #NN]`.** Case nào lấy một giả định làm căn cứ cho Expected
+Result thì cột Note ghi `[GĐ #NN]` — cùng họ với `[MANUAL]`, `[DATA-REQ]`.
+
+`build.py` đối chiếu ngược: mọi `[GĐ #NN]` trong Note mà **không** có dòng `assumptions`
+tương ứng sẽ vào `PROBLEMS` (exit 2). Case dựa vào một giả định mà giả định đó không
+được ghi lại ở đâu là **lỗi** — sheet này là chỗ duy nhất người mở file sau này biết vì
+sao Expected Result lại là chuỗi đó.
+
+Dùng marker riêng chứ **không** quét `#NN` trần, vì Note hợp lệ vẫn trích nguồn khác
+bằng cùng cú pháp (VD `"Message lấy từ D2 #17 của checklist"`) — quét trần là báo nhầm
+mọi case như thế.
 
 ## `sections` / `cases`
 

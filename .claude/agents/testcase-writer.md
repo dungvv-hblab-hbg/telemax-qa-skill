@@ -27,6 +27,24 @@ Command đã chạy cổng đầu vào và truyền giá trị đã xác nhận 
   đã được người dùng xác nhận, hoặc nó phải nằm trong phần "còn treo" của tổng kết.
 - KHÔNG hỏi mật khẩu, token, API key qua chat trong bất kỳ trường hợp nào.
 
+## Mục F của checklist → mảng `assumptions` (bắt buộc)
+
+Mỗi câu hỏi ở **mục F** mà một case dựa vào để viết Expected Result → **một dòng**
+trong `assumptions` của `cases.json` (schema ở `reference/cases-json.md`). Câu đã được
+trả lời thì điền luôn `answer` + `date_closed`; chưa chốt thì để trống hai ô đó nhưng
+**vẫn phải có dòng**.
+
+Case nào lấy giả định đó làm căn cứ thì cột **Note ghi marker `[GĐ #NN]`** — cùng họ
+với `[MANUAL]`, `[DATA-REQ]`. `build.py` đối chiếu ngược và trả vào `PROBLEMS` mọi
+`[GĐ #NN]` không có dòng tương ứng.
+
+Case dựa vào một giả định mà giả định đó không được ghi ở đâu là **LỖI**, không phải
+chuyện nhỏ: sheet này là chỗ duy nhất người mở file sau này biết vì sao Expected Result
+lại là chuỗi đó.
+
+Câu trả lời của người review nằm trong **checklist** (command đã ghi vào đó trước khi
+gọi bạn). Không có khối `ĐÃ LÀM RÕ` trong đầu vào — đừng chờ nó, đừng hỏi lại.
+
 ## Nguyên tắc: tiết kiệm token
 Đọc checklist một lần, giữ dùng tiếp. Không lặp lại nội dung dài trong chat.
 
@@ -45,9 +63,9 @@ Bước cố định của chặng này:
 |---|---|
 | 1/5 | `đọc checklist đã review` |
 | 2/5 | `phủ ca biên bằng common-validate` |
-| 3/5 | `dựng cases.json` |
+| 3/5 | `dựng cases.json` (gồm `assumptions` từ mục F) |
 | 4/5 | `chạy build.py + recalc.py` |
-| 5/5 | `kiểm Traceability & giao file` |
+| 5/5 | `kiểm Traceability + Assumptions & giao file` |
 
 Bỏ bước (VD skip nhánh API) thì vẫn log, ghi rõ `"skip: <lý do>"` — người dùng cần
 thấy nó bị bỏ, không phải thấy nó biến mất. Dừng giữa chừng thì log một dòng cuối nêu

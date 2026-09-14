@@ -71,3 +71,61 @@ rồi **thoát Claude Code và mở lại**.
 Vòng lặp cần tránh khi gặp `/login`: đăng nhập → vẫn `/login` → xoá `user.json` →
 ép `npm run auth` → vẫn `/login`. Probe `localStorage` trên `/favicon.ico` trước —
 chỉ có `app-version` nghĩa là profile trống, seed lại vô ích cho tới khi sửa cấu hình.
+
+## 4. Spec .ts fail 30/32 ngay lần chạy đầu — không lỗi nào là lỗi sản phẩm
+
+Biên bản của bộ bẫy locator ghi trong `skills/playwright-export/SKILL.md`. Đo trên
+TLM-3088 (`[Bug][Reports] Report Period displays 24-hour time…`), dashboard Blazor WASM.
+
+Diễn biến số fail qua từng lần sửa:
+
+| Lần | Fail | Pass | Sửa gì |
+|---|---|---|---|
+| 1 | 30 | 2 | (spec vừa export) |
+| 2 | 24 | 8 | selector: span trigger, visible filter, regex neo |
+| 3 | 17 | 15 | `fullyParallel: false` |
+| 4 | **16** | **16** | thêm ô Geofence bắt buộc |
+
+16 fail cuối = `TC-A-002`, `TC-A-003`, `TC-A-009` + `TC-B-005` × 13 report type — **đúng
+bằng** số assertion date-first cố ý phải đỏ cho tới khi dev sửa. Tức là sau 4 vòng, 0 lỗi
+còn lại thuộc về spec.
+
+**Bốn nguyên nhân, không cái nào tự lộ ra:**
+
+1. **Dropdown tự chế giữ option trong DOM kể cả khi đóng.** 31 thẻ
+   `div.field-searchable-select__select-item` của cả hai select luôn có mặt. Nên
+   `div:text-is("Idle Report")` khớp đúng thẻ đang ẩn, `.last()` chọn nó, click chờ hết
+   60s. Một mình nguyên nhân này là **21/30** fail.
+2. **`selectOption('Last 7 days')` so theo VALUE, không phải label.** Value thật:
+   `Today` / `LastDay` / `Last3Days` / `LastWeek` / `Last30Days` / `Custom` — 4/6 option
+   có label khác value.
+3. **`hasText` là so chuỗi con** → `'Idle Report'` khớp luôn `'Fleet Idle Report'`.
+4. **Field bắt buộc theo biến thể màn hình.** Geofence Report không dùng ô Vehicle mà có
+   ô Geofence riêng, bắt chọn tường minh — validation `"Please select a geofence."` hiện
+   **dù** option đầu đã `[selected]`. Spec bỏ qua → report không chạy → trang đứng ở
+   "Nothing run yet" → case đỏ như thể mất block Report Period.
+
+**Vì sao nguy hiểm hơn "chỉ là spec sai":** `playwright-export` quy định *"Phase 1 Pass
+mà spec Fail → spec sai, sửa selector rồi chạy lại"*. Luật đó đúng **cho từng case**.
+Khi 30/32 cùng đỏ, nguyên nhân mang tính hệ thống, và áp luật per-case vào đó là đi sửa
+30 chỗ vốn không hỏng — một vòng lặp không có lối ra.
+
+## 5. `fullyParallel: true` trên SPA nặng — fail GIẢ trông y hệt selector hỏng
+
+Đo cùng lượt TLM-3088, cùng một bộ test, chỉ đổi cấu hình chạy:
+
+| Cấu hình | Kết quả |
+|---|---|
+| `fullyParallel: true` (5 worker) | 24 fail / 8 pass, 4,1 phút |
+| cùng bộ test, `--workers=1` | các case đó **pass hết** |
+| `fullyParallel: false` | 16 fail / 16 pass, 9,0 phút — 16 fail là assertion cố ý phải đỏ |
+
+Cơ chế: nhiều browser cùng boot Blazor WASM làm một số tab đứng ở trang trắng, mọi test
+trong worker đó chết ở `beforeEach` với
+`expect(locator).toBeVisible() failed — getByText('Report Type')`, snapshot chỉ có
+`- img`. **Nhìn y hệt selector hỏng.**
+
+Kết luận đã áp vào template: `fullyParallel: false` + `workers: 2`. Các FILE vẫn chạy
+song song với nhau; chỉ test trong cùng một file bị tuần tự hoá — mà harness dùng một
+file cho một ticket, nên đây đúng là thứ cần. `workers: undefined` = số core / 2
+(5 worker trên Mac 8 nhân), quá nhiều cho một SPA nặng.

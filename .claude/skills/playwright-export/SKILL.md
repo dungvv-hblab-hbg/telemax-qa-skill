@@ -142,6 +142,37 @@ Yêu cầu độ chính xác: **đúng vị trí/đúng phần tử là đủ**,
 hảo tuyệt đối (theo chủ trương của team). Selector tạm chấp nhận được, miễn có
 đánh dấu để sau thay bằng thứ ổn định.
 
+### Năm lớp bẫy locator — đọc TRƯỚC khi viết selector
+
+Danh sách ưu tiên trên đúng cho control **chuẩn**. Năm lớp dưới đây là chỗ nó không cứu
+được: control tự chế và `<select>` thật. Đây là **lớp bẫy**, không phải danh sách
+selector của một app — mỗi repo có tên class khác nhau, nhưng cơ chế hỏng thì giống hệt.
+Ví dụ trong ngoặc lấy từ dashboard Telemax (biên bản đầy đủ:
+[docs/DEAD-ENDS.md](../../../docs/DEAD-ENDS.md) §4).
+
+1. **Dropdown tự chế giữ MỌI option trong DOM kể cả khi đóng** → selector theo text khớp
+   đúng thẻ **đang ẩn**, click chờ hết timeout. Luôn `.filter({ visible: true })` trước
+   khi chọn. **KHÔNG dùng `.last()` / `.first()` thay cho visible** — chúng chọn theo thứ
+   tự DOM, không theo cái đang hiện.
+2. **Phần tử mở dropdown thường KHÔNG phải thẻ bạn đoán.** Ghi **tag thật** đọc được ở
+   Phase 1 rồi mới viết selector, đừng suy từ hình dạng trên màn hình.
+   *(Ví dụ: `span.field-searchable-select__selected-display`, không phải `div`.)*
+3. **`hasText` / `getByText` là so chuỗi CON.** Tên option này là tiền tố của option kia
+   thì khớp nhầm. So bằng `{ exact: true }` hoặc `^...$`.
+   *(Ví dụ: `'Idle Report'` khớp cả `'Fleet Idle Report'`.)*
+4. **`<select>` thật: `selectOption('<chuỗi>')` so theo VALUE, không phải label.** Dùng
+   `selectOption({ label })`, và ghi value đọc được ở Phase 1 vào comment.
+   *(Ví dụ: value `LastWeek` trong khi label là "Last 7 days"; 4/6 option lệch.)*
+5. **Field bắt buộc khác nhau theo biến thể màn hình.** Cùng một trang, đổi loại/tab là
+   đổi bộ field bắt buộc. Thiếu một ô bắt buộc → form không submit → trang đứng ở trạng
+   thái rỗng → case đỏ **trông như** mất block dữ liệu. Ở Phase 1, với **mỗi biến thể**
+   ghi lại ô nào bắt buộc.
+   *(Ví dụ: Geofence Report bắt chọn ô Geofence, không dùng Vehicle — validation vẫn nổ
+   dù option đầu đã `[selected]`.)*
+
+Gặp lớp bẫy mới ở repo khác thì **bổ sung vào danh sách này**, mô tả theo cơ chế chứ
+đừng theo tên class.
+
 ### Truy vết ngược về test case Excel
 - File đặt tên đúng mã ticket; mỗi `test()` mở đầu bằng `TC-Y-NNN — ` đúng TC ID trong
   Excel. Ticket + TC ID cùng nhau là khoá truy vết.
@@ -164,8 +195,20 @@ Bỏ qua:
 Case cần điều kiện dữ liệu đặc biệt (VD "xe đang có fault") → vẫn export được
 nhưng ghi rõ cần test data phù hợp, hoặc `test.skip` kèm lý do.
 
+**Case kiểm nội dung file export (.xlsx / .csv) LÀ export được, không phải manual:**
+
+```ts
+const dl = await page.waitForEvent('download');
+await dl.saveAs(path);
+```
+
+rồi assert trên nội dung file. PDF thì dùng `pdftotext` nếu máy có; không có mới
+`[MANUAL]`, và ghi đúng lý do đó ("máy chưa có pdftotext"), đừng ghi "không kiểm được
+bằng automation" — câu đó không đúng và nó bỏ rơi những case rủi ro cao nhất của ticket.
+
 Case thật sự không tự động hoá được thì **không export**, và báo lại cho
-`test-runner` để nó ghi `Blocked` + Note `[MANUAL] <lý do>` vào Excel. Bỏ lửng
+`test-runner` để nó ghi `Blocked` + Note `[MANUAL] <lý do>` vào Excel — **kèm đường nào
+đã thử**. Bỏ lửng
 case đó là để nó nằm `Not Run` mãi và làm sai `% Executed` ở Summary.
 
 ## Cấu trúc một file spec (theo assets/example.spec.ts)
@@ -255,6 +298,21 @@ chỉ duy nhất trong một ticket):
 ```bash
 cd telemax-e2e && npx playwright test --project=chromium tests/TLM-XXXX.spec.ts -g "TC-Y-NNN"
 ```
+
+**Hơn NỬA file fail ở lần verify đầu → nghi MÔI TRƯỜNG trước, đừng sửa selector:**
+
+```bash
+cd <project e2e> && npx playwright test --project=chromium tests/TLM-XXXX.spec.ts --workers=1
+```
+
+Đỏ hàng loạt ở `beforeEach`, cùng một element, snapshot chỉ có `- img` = **SPA boot song
+song**, không phải selector sai (đo được: 24/30 fail biến mất với 1 worker). Config
+template đã để `fullyParallel: false` — gặp triệu chứng này ở repo khác thì **kiểm config
+trước tiên**, đừng đụng selector.
+
+Luật *"sửa 2 lần vẫn không khớp thì dừng"* là luật **cho từng case**. Khi quá nửa file
+cùng đỏ thì nguyên nhân mang tính **hệ thống** — áp luật per-case vào đó là đi sửa 30 chỗ
+vốn không hỏng.
 
 Đối chiếu với kết quả Phase 1:
 

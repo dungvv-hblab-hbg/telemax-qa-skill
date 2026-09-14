@@ -78,6 +78,35 @@ bash "$(dirname "${BASH_SOURCE[0]}")/qa-py.sh" "$SKILL_DIR/scripts/build.py" --i
 check "exit code 2" "$?" "2"
 grep -q "AC-99" "$WORK/gap.out" && ok "PROBLEMS nêu đúng AC-99" || bad "PROBLEMS không nêu AC-99"
 
+# ── 3b. sheet Assumptions & Questions ───────────────────────────────────────
+echo "[3b] assumptions -> sheet Assumptions & Questions"
+python3 - "$SKILL_DIR/assets/example.cases.json" "$WORK/assum.json" "$WORK/dang.json" <<'PY'
+import json,sys
+d=json.load(open(sys.argv[1]))
+# case trỏ [GĐ #72] VÀ trích D2 #17 — chỉ cái đầu là tham chiếu giả định
+d['sections'][0]['cases'][0]['note']='Expected theo [GĐ #72]; message lấy từ D2 #17'
+json.dump(d,open(sys.argv[3],'w'))                       # dangling: chưa có assumptions
+d['assumptions']=[{"ref":"#72","topic":"Report Period format",
+                   "assumption":"12-hour with AM/PM","answer":"confirmed by reviewer",
+                   "date_closed":"2026-09-14"}]
+json.dump(d,open(sys.argv[2],'w'))                       # đủ dòng -> phải sạch
+PY
+bash "$(dirname "${BASH_SOURCE[0]}")/qa-py.sh" "$SKILL_DIR/scripts/build.py" --input "$WORK/dang.json" \
+  --template "$SKILL_DIR/assets/template.xlsx" --output "$WORK/dang.xlsx" > "$WORK/dang.out" 2>&1
+check "[GĐ #NN] không có dòng -> exit 2" "$?" "2"
+grep -q "#72" "$WORK/dang.out" && ok "PROBLEMS nêu đúng #72" || bad "PROBLEMS không nêu #72"
+grep -q "#17" "$WORK/dang.out" && bad "báo nhầm D2 #17 (quét #NN trần)" || ok "không báo nhầm D2 #17"
+
+bash "$(dirname "${BASH_SOURCE[0]}")/qa-py.sh" "$SKILL_DIR/scripts/build.py" --input "$WORK/assum.json" \
+  --template "$SKILL_DIR/assets/template.xlsx" --output "$WORK/assum.xlsx" > "$WORK/assum.out" 2>&1
+check "có đủ dòng assumptions -> exit 0" "$?" "0"
+python3 - "$WORK/assum.xlsx" <<'PY' && ok "sheet Assumptions ghi đúng row 4" || bad "sheet Assumptions KHÔNG có data"
+import sys,openpyxl
+ws=openpyxl.load_workbook(sys.argv[1])['Assumptions & Questions']
+vals=[ws.cell(4,c).value for c in range(1,8)]
+sys.exit(0 if vals[0]=='#72' and vals[5]=='confirmed by reviewer' else 1)
+PY
+
 # ── 4. recalc.py điền lại giá trị Summary ───────────────────────────────────
 echo "[4] recalc.py"
 bash "$(dirname "${BASH_SOURCE[0]}")/qa-py.sh" "$SKILL_DIR/scripts/recalc.py" "$WORK/tc.xlsx" 90 >/dev/null 2>&1

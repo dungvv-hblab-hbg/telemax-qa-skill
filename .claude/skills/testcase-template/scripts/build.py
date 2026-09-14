@@ -36,6 +36,8 @@ LAST_COL = 14                               # A..N
 SUMMARY_COLS = ["B", "C", "D", "J", "L"]    # các cột Summary tham chiếu qua COUNTIF/COUNTA
 ID_RE = re.compile(r"^TC-([A-Z0-9]+)-(\d{3})$")
 TRACE_START = 4                             # data sheet Traceability bắt đầu row 4
+ASSUM_START = 4                             # data sheet Assumptions & Questions bắt đầu row 4
+ASSUM_COLS = ("ref", "topic", "gap", "assumption", "question", "answer", "date_closed")
 
 REQUIRED_COVER = ("module", "version", "source", "create_date")
 REQUIRED_EN = ("title_en", "steps_en", "expected_en")
@@ -125,6 +127,27 @@ def validate(data):
             for ac in c.get("acs", []):
                 if known_acs and ac not in known_acs:
                     errs.append(f"{cid}: tham chiếu AC '{ac}' không có trong 'acceptance_criteria'")
+
+    # 'assumptions' — mỗi câu hỏi mục F mà một case dựa vào. Tuỳ chọn, nhưng sai
+    # cấu trúc thì chặn: sheet này là chỗ DUY NHẤT lưu quyết định của người review,
+    # để trống nó là mất quyết định ngay khi đóng session.
+    for i, a in enumerate(data.get("assumptions") or []):
+        if not isinstance(a, dict):
+            errs.append(f"assumptions[{i}]: phải là object, không phải {type(a).__name__}")
+            continue
+        if not str(a.get("ref", "")).strip():
+            errs.append(f"assumptions[{i}]: thiếu 'ref' (số mục checklist, VD '#72')")
+        if not str(a.get("topic", "")).strip():
+            errs.append(f"assumptions[{i}]: thiếu 'topic'")
+        if not str(a.get("assumption", "")).strip():
+            errs.append(f"assumptions[{i}]: thiếu 'assumption' — giả định đang dùng làm "
+                        f"căn cứ cho Expected Result, không được để trống")
+        d = str(a.get("date_closed", "")).strip()
+        if d and not re.match(r"^\d{4}-\d{2}-\d{2}$", d):
+            errs.append(f"assumptions[{i}]: date_closed '{d}' phải dạng YYYY-MM-DD")
+        bad = set(a) - set(ASSUM_COLS)
+        if bad:
+            errs.append(f"assumptions[{i}]: khoá lạ {sorted(bad)} — hợp lệ: {list(ASSUM_COLS)}")
 
     return errs
 
@@ -361,6 +384,47 @@ def write_traceability(ws, data):
     return missing
 
 
+# ---------------------------------------------------------------- assumptions
+def write_assumptions(ws, data):
+    """Đổ sheet 'Assumptions & Questions' (header row 3, data từ row 4).
+
+    Đây là chỗ DUY NHẤT một người mở file sau này biết vì sao Expected Result lại là
+    chuỗi đó. Câu trả lời ở cổng `/qa-write-cases` chỉ tồn tại trong transcript —
+    không ghi vào đây là đóng session xong mất quyết định, và lần chạy sau lại chặn
+    ở đúng câu hỏi đã trả lời.
+
+    Trả về danh sách `ref` được Note của case trỏ tới mà KHÔNG có dòng nào ở đây.
+    """
+    rows = data.get("assumptions") or []
+
+    for r in range(ASSUM_START, max(ws.max_row, ASSUM_START) + 1):
+        for col in range(1, len(ASSUM_COLS) + 1):
+            ws.cell(r, col).value = None
+
+    for i, a in enumerate(rows):
+        r = ASSUM_START + i
+        for col, key in enumerate(ASSUM_COLS, start=1):
+            cell = ws.cell(r, col, a.get(key, ""))
+            cell.font = DATA_FONT
+            cell.border = BORDER
+            cell.alignment = Alignment(wrap_text=True, vertical="top",
+                                       horizontal="center" if col in (1, 7) else "left")
+
+    # Case nào đánh dấu [GĐ #NN] mà ở đây không có dòng tương ứng?
+    #
+    # Dùng marker riêng `[GĐ #NN]` chứ KHÔNG quét `#NN` trần: Note hợp lệ vẫn trích
+    # nguồn khác bằng cùng cú pháp (VD "Message lấy từ D2 #17 của checklist"), quét
+    # trần là báo nhầm mọi case như thế. Cùng họ với `[MANUAL]` / `[DATA-REQ]`.
+    have = {str(a.get("ref", "")).strip().lstrip("#") for a in rows}
+    referenced = {}
+    for s_ in data["sections"]:
+        for c in s_["cases"]:
+            blob = f"{c.get('note', '')} {c.get('note_vn', '')}"
+            for ref in re.findall(r"\[\s*GĐ\s*#(\d+)\s*\]", blob):
+                referenced.setdefault(ref, []).append(c["id"])
+    return {f"#{k}": v for k, v in sorted(referenced.items()) if k not in have}
+
+
 # ---------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser()
@@ -398,6 +462,7 @@ def main():
     sec = update_section_table(wb["Summary"], data)   # TRƯỚC widen_summary
     changed = widen_summary(wb["Summary"], last)
     missing_acs = write_traceability(wb["Traceability"], data)
+    dangling = write_assumptions(wb["Assumptions & Questions"], data)
 
     wb.save(args.output)
 
@@ -411,6 +476,7 @@ def main():
         "summary_formulas_widened": changed,
         "acs_total": len(data.get("acceptance_criteria", [])),
         "acs_missing": missing_acs,
+        "assumptions_written": len(data.get("assumptions") or []),
         "next_step": (f"Chạy recalc.py trên {args.output}, rồi kiểm Total == {total_cases} "
                       f"và RESULT BY SECTION cộng đúng"),
     }
@@ -424,6 +490,12 @@ def main():
     if missing_acs:
         problems.append(f"{len(missing_acs)} AC chưa có test case nào phủ: {missing_acs}. "
                         f"Xem sheet Traceability, bổ sung case trước khi giao file.")
+    if dangling:
+        problems.append(f"Cột Note đánh dấu [GĐ #NN] cho {len(dangling)} mục không có dòng nào "
+                        f"ở sheet 'Assumptions & Questions': {dangling}. Case dựa vào một giả định "
+                        f"mà giả định đó không được ghi lại ở đâu — đó là chỗ DUY NHẤT người đọc "
+                        f"file sau này biết vì sao Expected Result lại là chuỗi đó. "
+                        f"Bổ sung mảng 'assumptions' trong cases.json.")
     if problems:
         out["PROBLEMS"] = problems
 

@@ -101,6 +101,24 @@ Chỉ log ở mốc bước, không log từng thao tác nhỏ.
 Cùng một thao tác lỗi 3 lần liên tiếp (ClickUp, git, Playwright, newman) → DỪNG,
 báo người dùng.
 
+## Return contract — KHÔNG chạy nền, KHÔNG kết thúc lượt bằng "đang chờ"
+
+**KHÔNG chạy `npx playwright test --project=chromium` ở chế độ nền** (`run_in_background`), và **KHÔNG kết
+thúc lượt khi còn tiến trình nền đang chạy**. Chạy foreground với timeout đủ rộng (tối
+đa `600000` ms). Bộ >20 case thì **chia nhỏ** theo `-g` hoặc theo `describe` và chạy
+từng lô foreground — đừng đẩy xuống nền rồi ngồi chờ.
+
+**Lượt trả về của bạn PHẢI là khối tổng kết ở §5.** Một câu *"đang chờ background verify
+run…"* **không phải kết quả** — command coi chặng là thất bại và **không gọi lại bạn**.
+Kể cả khi phải dừng giữa chừng: **vẫn xuất khối §5** với số liệu có tới thời điểm đó,
+nêu rõ dừng ở đâu và vì sao, rồi mới dừng.
+(Đã xảy ra thật: agent kết thúc lượt hai lần không có kết quả, sau 423k token /
+349 tool call / 37 phút — người dùng phải kill tay.)
+
+**Thứ tự cổng cũng nằm trong contract.** Cổng export (`5/7`) phải qua **trước** khi ghi
+Excel (`6/7`). Log đủ **mọi** bước `1/7`…`7/7`, đúng thứ tự, kể cả bước skip — đã gặp
+log ra `6/7` trước `4/7`, và hai dòng `4/7` mâu thuẫn nhau.
+
 ## Điều kiện tiên quyết
 - **MCP Playwright** — xem mục riêng ngay dưới. Vận hành trình duyệt ở Phase 1:
   [reference/phase1-browser.md](reference/phase1-browser.md), đọc khi tới bước 2a-2.
@@ -465,6 +483,25 @@ sẽ vớ phải case của ticket khác.
 ### 2c. Nhánh Manual
 Case không tự động hoá được: ghi `Blocked` vào cột Round, và **cột Note (N) PHẢI
 bắt đầu bằng `[MANUAL]`** kèm lý do ngắn.
+
+**Case kiểm nội dung file export (.xlsx / .csv) KHÔNG phải manual.** Harness làm được:
+
+- **Phase 1 (MCP):** bấm Export, lấy file trong `.playwright-mcp-output/`, đọc bằng
+  `bash .claude/scripts/qa-py.sh -c "import openpyxl; ..."` (openpyxl đã có sẵn trong
+  venv của harness) rồi trích **đúng ô** làm Actual Result.
+- **Phase 2 (spec .ts):**
+  ```ts
+  const dl = await page.waitForEvent('download');
+  await dl.saveAs(path);
+  ```
+  rồi assert trên nội dung file.
+- **PDF:** dùng `pdftotext` nếu máy có. Không có thì mới `[MANUAL]`, và ghi **đúng lý do
+  đó** (`[MANUAL] máy chưa có pdftotext`), KHÔNG ghi "không kiểm được bằng automation".
+
+Chỉ đánh `[MANUAL]` khi **thật sự** không có đường tự động, và **phải nêu đường nào đã
+thử**. Lý do *"cannot be made on screen or through an API"* cho case export là **sai sự
+thật** — một lần đã loại **26% bộ test**, gồm chính case checklist gọi là rủi ro cao
+nhất ticket.
 
 **Case cần dữ liệu đặc thù** (VD "xe đang có engine fault"): dùng dữ liệu người dùng
 đã cung cấp ở `TEST_DATA`. Không có → đánh `[MANUAL] thiếu test data: <cần gì>`.

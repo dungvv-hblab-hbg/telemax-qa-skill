@@ -25,6 +25,7 @@ Các kiểm này độc lập nhau, nên phát trong cùng một message, đừn
 | Trạng thái project e2e | `bash .claude/scripts/qa-config.sh playwright \| head -5` |
 | Project e2e tồn tại thật | `ls <thư mục khai trong qa-config>/playwright.config.ts` |
 | `.env` của e2e | `ls <thư mục e2e>/.env` |
+| **Secret của e2e đã ignore chưa** | `for f in <e2e>/.env <e2e>/playwright/.auth/user.json; do git check-ignore -q "$f" \|\| echo "CHƯA IGNORE: $f"; done` — không in gì = đạt. `user.json` chứa `authToken_*`/`refreshToken` sống, và `git status` gộp cả cây thành một dòng `?? <e2e>/` nên nhìn mắt không thấy. Có dòng nào in ra → sửa `.gitignore` **trước mọi bước khác**. **Phải lặp từng file**: `check-ignore -q` chỉ nhận MỘT đường dẫn, truyền hai cái là `fatal:` và nhánh `||` báo "chưa ignore" kể cả khi đã ignore đúng |
 | Postman collection | `bash .claude/scripts/qa-config.sh postman` rồi `ls` đường dẫn khai báo |
 | Profile MCP có bị chiếm | `test -L .playwright-mcp-profile/SingletonLock && echo LOCKED \|\| echo FREE` |
 | MCP Playwright trong danh sách tool | có `Playwright:browser_*` không |

@@ -11,12 +11,18 @@ export default defineConfig({
   // Spec của ticket nằm ở tests/TLM-XXXX.spec.ts (xem README).
   testDir: './tests',
 
-  // Chạy song song trong một file. Tắt nếu test đụng cùng bản ghi trên staging.
-  fullyParallel: true,
+  // TẮT CÓ CHỦ ĐÍCH. Dashboard là Blazor WASM: nhiều browser cùng boot nó sẽ khiến
+  // một số tab đứng ở trang trắng, và mọi test trong worker đó fail ở beforeEach với
+  // "Report Type not found" — triệu chứng giống hệt selector hỏng, rất dễ sửa nhầm.
+  // Đo trên TLM-3088: 24 fail khi song song, cùng bộ test pass với 1 worker.
+  // Các FILE vẫn chạy song song; chỉ test trong cùng một file bị tuần tự hoá.
+  fullyParallel: false,
 
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+
+  // undefined = số core / 2 (5 worker trên Mac 8 nhân) — quá nhiều cho SPA này.
+  workers: process.env.CI ? 1 : 2,
 
   // Staging đôi khi chậm; 30s mặc định hay đứt oan ở màn hình có bản đồ.
   timeout: 60_000,

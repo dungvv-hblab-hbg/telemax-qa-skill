@@ -51,7 +51,39 @@ Khi phân tích git diff để xác định **cần test gì**, làm theo HAI t�
 Quy ước team: ticket ID dạng `TLM-XXX` (VD `TLM-2689`) xuất hiện ở **cả tên
 branch lẫn commit message**. Ưu tiên theo thứ tự:
 
-**Cách A (ưu tiên) — branch chứa ID, so với nhánh base:**
+### Bước 0 — ticket đã lên `stage` chưa? Kiểm TRƯỚC khi chọn cách
+
+Đây là bước quyết định, không phải bước tham khảo. Chạy trước mọi lệnh diff:
+
+```
+git fetch origin stage --quiet
+git log --oneline --first-parent origin/stage --grep="TLM-XXXX"
+```
+
+**Có commit → Cách C (ưu tiên).** Diff theo chính commit merge/squash của ticket, so
+với cha thứ nhất của nó:
+```
+git diff <sha>^ <sha> --name-only
+```
+Nhiều commit (kể cả chuỗi revert → áp lại) thì lấy *net*:
+```
+git diff <cha của commit đầu> <commit cuối> --name-only
+```
+và **ghi lịch sử revert vào mục A của checklist**. Một ticket bị revert rồi áp lại là
+tín hiệu lần đầu đã hỏng ở đâu đó — đó chính là vùng regression đáng test nhất, đừng
+để nó chìm.
+
+**KHÔNG dùng `origin/stage...<branch>` khi ticket đã merge.** `/qa-run` cổng 1 bắt buộc
+code của ticket phải ở trên `stage` mới được test, nên tới lúc harness chạy thì nhánh
+feature **luôn** cũ hơn `stage`. Diff ba chấm khi đó lôi vào mọi thứ người khác merge
+sau — sai **theo thiết kế**, không phải sai vì xui, và không có tín hiệu nào báo.
+Đo được một ca: nhánh feature cũ ~2 tuần, `stage...feature` kéo thêm ~65 dòng trong một
+file là công việc người khác merge sau.
+
+**Không có commit trên `stage` → Cách A.** Lúc đó ticket chưa merge, nhánh feature mới
+là nguồn đúng.
+
+**Cách A — branch chứa ID, so với nhánh base (chỉ khi ticket CHƯA merge):**
 Nếu đang làm trên nhánh feature theo ticket (`feature/TLM-2689-...`), lấy diff so với
 điểm rẽ nhánh chung với base (mặc định `stage`):
 ```
@@ -74,8 +106,9 @@ theo ID trong message:
 git log --grep="TLM-XXX" --name-only --pretty=format: | sort -u | grep -v '^$'
 ```
 
-Nguyên tắc chọn: có nhánh riêng theo ticket → dùng A (chính xác & gọn nhất). Không
-có → dùng B. Nếu cả hai áp dụng được, A cho kết quả sạch hơn.
+Nguyên tắc chọn, theo đúng thứ tự: **ticket đã có commit trên `stage` → C** (luôn
+thắng, kể cả khi nhánh feature vẫn còn). Chưa merge mà có nhánh riêng → **A**. Không có
+nhánh riêng → **B**.
 
 Chỉ phân tích các file mà tầng này trả về — KHÔNG đọc toàn bộ repo, KHÔNG dính
 thay đổi của ticket khác.
@@ -117,7 +150,10 @@ vô hại.
 
 - [ ] Base là **`stage`** (nhánh build ra dashboard-stage), không phải `dev`/`master`
 - [ ] Đã `git fetch origin <base>` trước khi diff — ref local cũ cho diff sai, im lặng
-- [ ] Dùng **ba chấm** `origin/stage...<branch>` (so với merge-base), không phải hai chấm
+- [ ] **Đã chạy Bước 0** — biết ticket đã lên `stage` hay chưa TRƯỚC khi chọn cách diff
+- [ ] Ticket **đã merge** → dùng Cách C (`git diff <sha>^ <sha>`), KHÔNG dùng `stage...<branch>`
+- [ ] Có chuỗi revert → áp lại → đã ghi vào mục A và nêu là vùng regression trọng điểm
+- [ ] Ticket **chưa merge** → dùng **ba chấm** `origin/stage...<branch>` (so với merge-base), không phải hai chấm
 - [ ] Ticket ID do người dùng xác nhận; suy từ tên nhánh thì đã hỏi lại
 - [ ] Không tìm thấy commit → **đã hỏi** code chưa xong hay ticket không đụng code,
       không tự kết luận và không tự bỏ mục G

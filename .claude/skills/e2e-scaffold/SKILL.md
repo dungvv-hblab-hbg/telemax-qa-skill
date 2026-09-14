@@ -76,6 +76,20 @@ thật vào mục Playwright của `qa-config.md`:
 **Vá, không ghi đè.** Config của họ có thể đang chạy CI. Trình bày diff đề xuất cho
 người dùng duyệt; đụng vào project đang có tên khác thì hỏi, đừng đổi tên.
 
+5. **Secret của project e2e đã được ignore chưa** — kiểm bằng lệnh, không suy từ pattern:
+   ```bash
+   for f in <project e2e>/.env <project e2e>/playwright/.auth/user.json; do
+     git check-ignore -q "$f" || echo "CHƯA IGNORE: $f"
+   done
+   ```
+   Không in gì = đạt. **Phải lặp từng file**: `git check-ignore -q` chỉ nhận MỘT đường
+   dẫn — truyền hai cái là `fatal: --quiet is only valid with a single pathname`, và
+   nhánh `||` sẽ báo "chưa ignore" **kể cả khi đã ignore đúng**.
+   Không qua → thêm `.gitignore` tự chứa **vào trong thư mục e2e** (khối ở nhánh B),
+   **trước mọi bước khác**. Repo có sẵn Playwright là repo dễ dính nhất: `.gitignore` gốc
+   của họ viết cho bố cục của họ, và pattern neo-gốc không với tới thư mục con — kể cả
+   khi họ *đã* nghĩ tới việc ignore `playwright/.auth/`.
+
 ### B. Repo CHƯA CÓ, và là app web → scaffold theo app thật
 
 Dùng [assets/playwright.config.template.ts](assets/playwright.config.template.ts) làm
@@ -91,7 +105,54 @@ khung. Nó đã mang sẵn cả bốn hàng rào trên; phần phải điền l�
 Sinh: `playwright.config.ts` · `auth.setup.ts` · `auth.prod.setup.ts` ·
 `checks/setup-check.spec.ts` · `fixtures/test-data.ts` · `tsconfig.json` ·
 `package.json` (script `test`/`check`/`auth`/`test:prod`, **mọi script phải có
-`--project`**) · `.env.example`.
+`--project`**) · `.env.example` · **`.gitignore` TRONG thư mục e2e**.
+
+**`.gitignore` phải tự chứa — đây là hàng rào credential, không phải tiện nghi:**
+
+```gitignore
+.env
+.env.*
+!.env.example
+playwright/.auth/
+test-results/
+playwright-report/
+blob-report/
+node_modules/
+package-lock.json
+```
+
+**Lý do phải tự chứa — đúng với mọi repo, không riêng repo nào:** trong `.gitignore`,
+pattern **có dấu `/` ở giữa** (như `playwright/.auth/`) bị **neo vào thư mục chứa file
+`.gitignore` đó**. Nên một pattern như thế ở `.gitignore` **gốc repo** KHÔNG khớp
+`<project e2e>/playwright/.auth/`. Project e2e nằm trong thư mục con thì luôn dính lỗi
+này, bất kể thư mục tên gì.
+
+Hai thứ làm nó **không tự lộ ra**:
+- `git status` gộp cả cây chưa track thành **một dòng** `?? <project e2e>/` — nhìn bằng
+  mắt không thấy file secret bên trong, và `git add <project e2e>/` là commit luôn.
+- `storageState` là file do `npm run auth` sinh ra *sau* khi scaffold xong, nên lúc dựng
+  project chưa có gì để thấy.
+
+Thứ bị rò không phải session cookie: app dùng token trong **localStorage** thì `user.json`
+có `cookies: []` và chứa **access token + refresh token**. Refresh token tái tạo được
+phiên sau khi access token hết hạn — rò nó nặng hơn rò một session cookie.
+
+*(Đo trên repo Telemax2: `git check-ignore` trả `NOT IGNORED` cho
+`telemax-e2e/playwright/.auth/user.json`, file chứa `authToken_83` + `refreshToken`,
+`cookies: 0`.)*
+
+Sinh xong **phải verify bằng lệnh**, đừng tin pattern:
+
+```bash
+for f in <project e2e>/.env <project e2e>/playwright/.auth/user.json; do
+  git check-ignore -q "$f" || echo "CHƯA IGNORE — DỪNG, sửa .gitignore trước: $f"
+done
+```
+
+Không in gì = đạt. **Lặp từng file, đừng truyền hai đường dẫn một lượt**:
+`git check-ignore -q` chỉ nhận MỘT đường dẫn. Truyền hai cái là
+`fatal: --quiet is only valid with a single pathname`, và nhánh `||` báo "chưa ignore"
+**kể cả khi đã ignore đúng** — một báo động giả làm `/qa-setup` dừng ở mọi repo.
 
 Cách viết hai file `auth.*.setup.ts` — phần dễ sai nhất — ở
 [reference/auth-setup.md](reference/auth-setup.md). Đọc nó trước khi viết.
@@ -130,6 +191,10 @@ Dù đi nhánh nào, mục Playwright phải phản ánh sự thật:
 "chưa có": DỪNG và báo. Không tự tạo, không đoán vị trí khác. Cùng quy ước với mục
 Postman.
 
+**Ngoại lệ duy nhất: khi đang chạy `/qa-setup`.** Đó chính là chặng được phép dựng —
+nó dựng xong rồi ghi `Trạng thái` cho đúng. Luật "DỪNG" ở trên là cho các chặng **sau**
+setup (`/qa-run`, `/qa-verify-prod`), nơi một thư mục biến mất nghĩa là có gì đó hỏng.
+
 ## Tự kiểm
 
 - [ ] Đã dò trước khi hỏi — không hỏi thứ đọc được từ repo
@@ -138,6 +203,8 @@ Postman.
 - [ ] `storageState` staging và production là **hai file khác nhau**
 - [ ] Mọi script trong `package.json` có `--project`
 - [ ] `PROD_BASE_URL` do người dùng đưa, không đoán
-- [ ] Không hỏi mật khẩu qua chat; credential chỉ vào `.env`, `.env` đã gitignore
+- [ ] Không hỏi mật khẩu qua chat; credential chỉ vào `.env`
+- [ ] Thư mục e2e có `.gitignore` **của riêng nó**, không dựa vào `.gitignore` gốc repo
+- [ ] `.env` **VÀ** `playwright/.auth/` đều **qua được `git check-ignore`** — chạy lệnh thật, không suy từ pattern
 - [ ] `qa-config.md` mục Playwright đã ghi `Trạng thái` + đường dẫn thật
 - [ ] Nhánh C: đã nêu rõ nhánh UI sẽ bị skip và bao nhiêu case ảnh hưởng
