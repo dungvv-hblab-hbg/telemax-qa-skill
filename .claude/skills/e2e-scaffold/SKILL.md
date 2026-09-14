@@ -78,9 +78,13 @@ người dùng duyệt; đụng vào project đang có tên khác thì hỏi, đ
 
 5. **Secret của project e2e đã được ignore chưa** — kiểm bằng lệnh, không suy từ pattern:
    ```bash
-   git check-ignore -q <project e2e>/.env <project e2e>/playwright/.auth/user.json \
-     && echo OK || echo "CHƯA IGNORE"
+   for f in <project e2e>/.env <project e2e>/playwright/.auth/user.json; do
+     git check-ignore -q "$f" || echo "CHƯA IGNORE: $f"
+   done
    ```
+   Không in gì = đạt. **Phải lặp từng file**: `git check-ignore -q` chỉ nhận MỘT đường
+   dẫn — truyền hai cái là `fatal: --quiet is only valid with a single pathname`, và
+   nhánh `||` sẽ báo "chưa ignore" **kể cả khi đã ignore đúng**.
    Không qua → thêm `.gitignore` tự chứa **vào trong thư mục e2e** (khối ở nhánh B),
    **trước mọi bước khác**. Repo có sẵn Playwright là repo dễ dính nhất: `.gitignore` gốc
    của họ viết cho bố cục của họ, và pattern neo-gốc không với tới thư mục con — kể cả
@@ -140,9 +144,15 @@ phiên sau khi access token hết hạn — rò nó nặng hơn rò một sessio
 Sinh xong **phải verify bằng lệnh**, đừng tin pattern:
 
 ```bash
-git check-ignore -q <project e2e>/.env <project e2e>/playwright/.auth/user.json \
-  && echo OK || echo "CHƯA IGNORE — DỪNG, sửa .gitignore trước mọi bước khác"
+for f in <project e2e>/.env <project e2e>/playwright/.auth/user.json; do
+  git check-ignore -q "$f" || echo "CHƯA IGNORE — DỪNG, sửa .gitignore trước: $f"
+done
 ```
+
+Không in gì = đạt. **Lặp từng file, đừng truyền hai đường dẫn một lượt**:
+`git check-ignore -q` chỉ nhận MỘT đường dẫn. Truyền hai cái là
+`fatal: --quiet is only valid with a single pathname`, và nhánh `||` báo "chưa ignore"
+**kể cả khi đã ignore đúng** — một báo động giả làm `/qa-setup` dừng ở mọi repo.
 
 Cách viết hai file `auth.*.setup.ts` — phần dễ sai nhất — ở
 [reference/auth-setup.md](reference/auth-setup.md). Đọc nó trước khi viết.

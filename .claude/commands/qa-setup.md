@@ -20,7 +20,7 @@ Kiểm từng cái rồi báo tôi trạng thái **trước khi chạy bất c�
 | `qa-config.md` | còn dòng nào `CHƯA ĐIỀN` không |
 | **Python + openpyxl** | `bash .claude/scripts/qa-py.sh -c "import openpyxl, sys; print(sys.executable)"` |
 | **LibreOffice** (cho `recalc.py`) | `which soffice \|\| ls /Applications/LibreOffice.app 2>/dev/null` |
-| **Secret của e2e đã ignore chưa** | `git check-ignore -q <e2e>/.env <e2e>/playwright/.auth/user.json && echo OK \|\| echo "CHƯA IGNORE — DỪNG"` — `user.json` chứa `authToken_*`/`refreshToken` sống, và `git status` gộp cả cây thành một dòng `?? <e2e>/` nên nhìn mắt không thấy. Không qua → sửa `.gitignore` **trước mọi bước khác** |
+| **Secret của e2e đã ignore chưa** | `for f in <e2e>/.env <e2e>/playwright/.auth/user.json; do git check-ignore -q "$f" \|\| echo "CHƯA IGNORE: $f"; done` — không in gì = đạt. `user.json` chứa `authToken_*`/`refreshToken` sống, và `git status` gộp cả cây thành một dòng `?? <e2e>/` nên nhìn mắt không thấy. Có dòng nào in ra → sửa `.gitignore` **trước mọi bước khác**. **Phải lặp từng file**: `check-ignore -q` chỉ nhận MỘT đường dẫn, truyền hai cái là `fatal:` và nhánh `||` báo "chưa ignore" kể cả khi đã ignore đúng |
 | **Session code e2e** | `ls <project e2e>/playwright/.auth/user.json` |
 | **Postman collection** | `ls tests/postman/telemax.postman_collection.json` — đường dẫn khai ở `qa-config.md` |
 
