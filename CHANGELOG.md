@@ -1,5 +1,76 @@
 # Changelog — Telemax QA Harness
 
+## v3.8 — 2026-09-14
+
+Nhánh **không-có-spec**: ticket rỗng, hoặc tính năng cũ không có ticket nào.
+
+### Vấn đề
+
+Cả pipeline giả định ticket có spec + AC. Thực tế gặp ba trạng thái không có:
+
+1. Ticket chỉ có tiêu đề — "Test Order Module", 0 AC, không Figma
+2. Tính năng làm từ lâu, không ai tạo ticket, không commit nào gắn mã
+3. Ticket dev quên điền mô tả
+
+Trước bản này, cả ba đều đi lọt: `spec-analyst` ghi ra một `analysis-spec.md` rỗng ruột,
+`test-analyst` gộp nó thành checklist **trông như thật**, và không có tín hiệu nào báo.
+Bảng "Thiếu một vế" chỉ bắt *thiếu file*, không bắt *file rỗng ruột*.
+
+Cái sai sâu hơn: nếu để agent nặn spec từ code thì test sinh ra chỉ chứng minh "code làm
+đúng cái code đang làm". Bộ test xanh cả loạt và **không bao giờ đỏ ở chỗ cần đỏ** — vì
+chuẩn để so chính là cái đang bị nghi sai.
+
+### Cách giải
+
+Đổi **nguồn** của vế "yêu cầu", không bỏ vế đó:
+
+```
+ui-explorer   (dò staging qua MCP, VẪN cấm đọc code)  ─┐
+                                                       ├─► test-analyst
+code-analyst  (đọc code, không cần diff)              ─┘
+```
+
+Hai vế vẫn độc lập nên chỗ lệch vẫn có nghĩa — chỉ đọc thành "UI làm A, code làm B".
+
+Và chỉ khẳng định thứ sai **bất kể yêu cầu là gì**: validate thiếu ở BE, quyền không
+check ở BE, nhánh lỗi/rỗng không xử, lệch nhất quán, sai nghiệp vụ telematics. Mỗi
+finding bắt buộc dẫn được **chuẩn nào bị vi phạm**; không dẫn được thì nó là câu hỏi,
+không phải bug. Phần cần ý định con người thành dòng `❓` chờ người ký.
+
+### Hai tốc độ
+
+| | Người dùng tốn | Được |
+|---|---|---|
+| **a — săn bug** (mặc định) | 1 lượt duyệt bug | bug ngay, không docs, không Excel |
+| **b — + spec ngược** | thêm một lượt ký file | bug + spec cho module, đẩy lên ticket |
+
+Ký xong, spec đăng lên mô tả ticket ClickUp → `/qa-analyze` lần sau chạy bình thường.
+Ticket rỗng tự lấp đầy chính nó.
+
+### Thay đổi
+
+- **`ui-explorer`** (agent mới) — dò UI staging, cấm đọc code, chỉ đụng dữ liệu tự tạo
+  (`QA-EXPLORE-*`), không chạy production, không tự dựng request API
+- **`spec-analyst`** — đếm AC/số từ mô tả/Figma, bật cờ `SPEC_INSUFFICIENT`. Báo **sự
+  kiện, không báo kết luận**: ticket QA cố ý rỗng và ticket dev quên điền trông y hệt
+  nhau, người dùng quyết ở command
+- **`test-analyst`** — thêm `MODE: findings | spec-draft`; bảng "Thiếu một vế" bắt thêm
+  case *file có, nội dung rỗng*
+- **`/qa-analyze`** — cổng giữa: một câu hỏi duy nhất, gộp cả phạm vi (tick sẵn từ
+  `K3`/`K4`) lẫn ba lựa chọn
+- **`/qa-apply-feedback`** — nhánh ký duyệt: ✅ → mô tả ticket · ❌ → finding · ❓ →
+  comment hỏi BA. Ghi local trước, duyệt cả lô rồi mới chạm ClickUp
+- **`bug-proposer` / `bug-filer` / `/qa-file-bugs`** — nhận `findings_*.md` làm nguồn
+  thứ hai bên cạnh Excel; nhánh này không có file test case nên không upload Drive
+- **`/qa-status`**, `qa-state.sh` — biết `findings`/`spec-draft`/`spec-signed`; thiếu
+  checklist mà có findings **không phải lệch**
+
+### Ngân sách
+
+Chi tiết nhánh này (~3.300 token) để ở `agents/reference/no-spec-mode.md`, không nằm
+trong command — ticket có spec không trả tiền cho nó. Baseline `/qa-analyze` chỉ tăng
+~700 token (cờ phát hiện + khai báo `MODE`).
+
 ## v3.7 — 2026-09-14
 
 `/qa-retro` — rà lại lượt chạy vừa xong để tìm chỗ **harness** hỏng.

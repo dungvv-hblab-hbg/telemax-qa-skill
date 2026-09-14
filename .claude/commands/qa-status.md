@@ -27,7 +27,8 @@ Lệch nhau thì **báo thẳng, đừng làm phẳng**:
 
 | Journal | Artifact | Nói gì |
 |---|---|---|
-| `analyze: done` | `checklist: false` | "Nhật ký nói đã phân tích nhưng **không thấy** `checklist_$1.md`. File bị xoá hay đổi tên? Chạy lại `/qa-analyze $1`." |
+| `analyze: done` | `checklist: false`, `findings: false` | "Nhật ký nói đã phân tích nhưng **không thấy** `checklist_$1.md`. File bị xoá hay đổi tên? Chạy lại `/qa-analyze $1`." |
+| `analyze: done` | `checklist: false`, `findings: true` | **Không phải lệch.** Ticket đi nhánh không-có-spec, nhánh đó cố ý không sinh checklist. Đừng giục chạy lại |
 | `write-cases: done` | `testcase_xlsx: []` | "Không thấy file `.xlsx` nào. Chạy lại `/qa-write-cases $1`." |
 | chưa có mục nào | có artifact | "Có file nhưng chưa có nhật ký — ticket này chạy từ trước khi harness ghi trạng thái. Suy từ artifact." |
 
@@ -81,6 +82,9 @@ Rồi **một dòng** kết luận: lệnh tiếp theo nên chạy, và vì sao.
 |---|---|
 | Chưa có gì | `/qa-analyze $1` |
 | `analyze: done`, checklist có, chưa apply-feedback | Mở checklist review. Có sửa → ghi vào "Phản hồi review" rồi `/qa-apply-feedback $1`. Không sửa gì → `/qa-write-cases $1` |
+| `analyze: done`, có `findings`, không có `spec_draft` | Nhánh không-có-spec, chọn "săn bug". Đọc `findings_$1.md`, xoá dòng không đồng ý, rồi `/qa-file-bugs $1`. **Ticket này không có test case Excel** — đúng thiết kế |
+| có `spec_draft`, chưa có `spec_signed` | Ký `spec-draft_$1.md` (✅/❌/❓ từng dòng) rồi `/qa-apply-feedback $1` |
+| có `spec_signed` | Spec đã ký. `/qa-analyze $1` lại từ đầu để ra checklist bình thường |
 | `apply-feedback: done` | `/qa-write-cases $1` |
 | `write-cases: done`, có `.xlsx` | Review file test case, rồi `/qa-run $1` |
 | `run: in_progress` | `/qa-run $1` — cổng sẽ đề xuất `RESUME: có` |

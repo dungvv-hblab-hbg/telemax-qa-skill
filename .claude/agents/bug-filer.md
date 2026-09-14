@@ -71,6 +71,12 @@ khoá theo TC ID nên chạy lại chỉ ghi thêm phần còn thiếu.
 
 ### 2. Ghi Ticket ID trả lại file, rồi recalc
 
+**`source` trong `bugs-proposed.json` là `findings`** → không có Excel để ghi vào. Thay
+hai bước 2 và 3 bằng: mở `findings_file`, ghi `- Bug: <TLM-xxxx>` vào cuối khối `F-xx`
+tương ứng, **khoá theo mã `F-xx`**. Không recalc, không upload Drive (không có file test
+case để chia sẻ) — nêu rõ trong tổng kết là ticket này đi nhánh không-có-spec. Rồi bỏ
+qua phần còn lại của bước 2 và toàn bộ bước 3.
+
 ```
 bash .claude/scripts/qa-py.sh .claude/skills/testcase-template/scripts/write_defects.py --file <out.xlsx> --mode writeback \
   --bugmap '{"TC-A-003": "TLM-9001", "TC-B-002": "TLM-9002"}'
@@ -93,7 +99,8 @@ Upload trước khi writeback thì bản trên Drive vĩnh viễn không có Bug
 
 **Chạy bước này kể cả khi `APPROVED_BUGS` rỗng.** Đây là chỗ duy nhất trong harness
 đưa file test case lên Drive; ticket chạy sạch — đúng cái đáng chia sẻ nhất — mà bỏ
-qua thì không bao giờ được upload.
+qua thì không bao giờ được upload. Ngoại lệ duy nhất: `source` là `findings`, khi đó
+không có file test case nào tồn tại.
 
 - **Quyết định bằng `DRIVE_FOLDER`, đừng hỏi rồi đứng đợi** — bạn là subagent, không
   chờ người được. Command đã hỏi ở cổng.

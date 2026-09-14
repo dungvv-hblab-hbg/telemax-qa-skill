@@ -108,22 +108,20 @@ CODE_ANALYSIS: .qa/$1/analysis-code.md   (ghi "không có" nếu code-analyst b�
 có yêu cầu thì không có gì để test. `code-analyst` dừng hoặc không có diff → **vẫn
 gọi** `test-analyst`, nó biết cách bỏ mục G và D6.
 
-Sau khi agent kết thúc, nói với tôi bằng tiếng Việt, ngắn gọn:
-1. Đường dẫn file `.qa/$1/checklist_$1.md`
-2. Tóm tắt: bao nhiêu mục, bao nhiêu AC, bao nhiêu câu hỏi độ tin **Thấp** (bắt
-   buộc hỏi khách), có mục G (impact từ diff) hay không
-2b. **Mục D6 — spec lệch code**: bao nhiêu dòng. Không rỗng thì nêu thẳng ra đây,
-   đây là thứ tôi cần nhìn trước tiên: hoặc code sai, hoặc spec đã đổi mà code chưa
-   theo. Rỗng thì nói rõ là rỗng, đừng bỏ qua im lặng.
-3. Khối tổng kết đầu vào: tôi đã xác nhận gì, agent tự quyết gì (mức 3), còn treo gì
-4. Lời mời review — nêu **hai nhánh**, đừng mời `/qa-apply-feedback` vô điều kiện:
-   - Mở file. **Có chỗ cần sửa** → ghi vào section **"Phản hồi review"** ở cuối
-     (tham chiếu bằng số: `#4 sai — maxlength thật là 100`), lưu, rồi chạy
-     `/qa-apply-feedback $1`.
-   - **Đọc thấy ổn, không sửa gì** → chạy thẳng `/qa-write-cases $1`.
-     `/qa-apply-feedback` trên một section rỗng không làm gì cả, chỉ tốn một lượt.
+`spec-analyst` báo **`SPEC_INSUFFICIENT: có`** → **đừng gọi `test-analyst`**, sang cổng
+ngay dưới đây.
 
-Đừng tự đi tiếp sang viết test case.
+## Cổng giữa — ticket không đủ dữ kiện để dựng checklist
+
+Ticket chỉ có tiêu đề ("Test Order Module"), hoặc tính năng làm từ lâu không có ticket
+dev nào. Đi tiếp như bình thường thì `test-analyst` vẫn dựng ra một checklist trông như
+thật, nhưng mọi dòng đều suy từ chính code — test sinh ra từ đó **không bao giờ đỏ ở
+đúng chỗ cần đỏ**. Dừng ở đây và để tôi chọn.
+
+**Đọc `.claude/agents/reference/no-spec-mode.md`, mục A** rồi làm đúng theo: dựng danh
+sách phạm vi từ `analysis-code.md` đã có, hỏi tôi MỘT lượt gồm cả phạm vi lẫn ba lựa
+chọn, rồi gọi `ui-explorer` + `test-analyst` ở chế độ tương ứng. Đừng làm theo trí nhớ —
+file đó giữ nguyên văn câu hỏi, khuôn đầu vào của agent, và cách ghi state cho nhánh này.
 
 ## Ghi trạng thái (bắt buộc — để `/qa-status` và resume dùng được)
 
@@ -138,6 +136,7 @@ bash .claude/scripts/qa-state.sh set $1 analyze in_progress "bắt đầu phân 
 bash .claude/scripts/qa-state.sh set $1 analyze done   "<tóm tắt 1 dòng: bao nhiêu AC, bao nhiêu dòng D6>"
 bash .claude/scripts/qa-state.sh set $1 analyze failed "<lý do dừng>"
 ```
+
 
 Journal này là **nhật ký, không phải nguồn chân lý** — artifact trên đĩa mới là sự
 thật. Đừng bỏ bước ghi: bỏ là `/qa-status` mù, và lần chạy sau không biết tiếp từ đâu.
