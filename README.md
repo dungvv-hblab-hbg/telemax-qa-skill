@@ -6,7 +6,10 @@ Bộ agentic workflow cho quy trình QA của Telemax, chạy trên **Claude Cod
 ticket → checklist → test case Excel → chạy test (UI/API) → bug ClickUp → verify production
 ```
 
-Mười slash command, tám subagent, tám skill.
+Mười một slash command, chín subagent, tám skill.
+
+Người mới: đọc **[docs/TUTORIAL.md](docs/TUTORIAL.md)** — hướng dẫn từng bước, đầu vào
+và đầu ra của mỗi chặng. Bản tiếng Anh: [docs/TUTORIAL.en.md](docs/TUTORIAL.en.md).
 
 **Năm điểm dừng cho người**, không phải ba: sau checklist · sau khi áp phản hồi ·
 sau file test case · sau sheet Defects · và duyệt cả lô bug trước khi tạo. Harness
@@ -134,6 +137,11 @@ interpreter có openpyxl (`.claude/.venv` → `$QA_PYTHON` → `.qa/.venv` → `
     ▸ DỪNG — bạn duyệt cả lô bug + assignee
     bug-filer (tạo bug -> ghi Bug ID về Excel -> upload Drive)
 
+/qa-retro TLM-2901                   (tuỳ chọn — soi HARNESS, không soi sản phẩm)
+    retro-analyst ×2 SONG SONG, hai model, không đọc bài của nhau
+    -> command đối chiếu + chạy lại "Lệnh kiểm" của TỪNG phát hiện
+    -> .qa/TLM-2901/retro-<ngày>.md
+
 --- sau khi dev fix và deploy lên production ---
 
 /qa-verify-prod TLM-2901
@@ -144,7 +152,7 @@ Quên đang làm dở ticket nào?
 
 ```
 /qa-status              # mọi ticket, mới nhất lên đầu
-/qa-status TLM-2901     # chi tiết sáu chặng của một ticket
+/qa-status TLM-2901     # chi tiết bảy chặng của một ticket
 ```
 
 Mỗi chặng xong ghi một dòng vào `.qa/<ticket>/state.json`. Đó là **nhật ký, không
@@ -168,8 +176,8 @@ chạy bằng `npx playwright test` cũng đổ vào cùng file.
 ```
 .claude/                          thứ được copy sang repo đích
 ├─ qa-config.md                   ĐIỂM KHAI BÁO DUY NHẤT — nhánh, path, ClickUp list
-├─ commands/                      10 slash command — điểm vào, chờ người dùng được
-├─ agents/                        8 subagent — chạy một chặng rồi kết thúc
+├─ commands/                      11 slash command — điểm vào, chờ người dùng được
+├─ agents/                        9 subagent — chạy một chặng rồi kết thúc
 │  └─ reference/                  tri thức chỉ một nhánh cần (Phase 1 browser)
 ├─ skills/                        8 skill — tri thức tĩnh, nạp theo nhu cầu
 └─ scripts/
@@ -186,6 +194,8 @@ telemax-e2e/                      project Playwright của CHÍNH repo này (dog
                                   install.sh KHÔNG copy — /qa-setup dựng bản hợp
                                   với repo đích (skill e2e-scaffold)
 install.sh                        cài vào repo đích
+docs/TUTORIAL.md                  hướng dẫn dùng từng bước cho người mới
+docs/TUTORIAL.en.md               bản tiếng Anh của TUTORIAL.md
 docs/TESTING.md                   hướng dẫn test 4 tầng + bảng chẩn đoán lỗi
 docs/DEAD-ENDS.md                 biên bản các ngõ cụt đã đi — đừng thử lại
 evals/                            5 kịch bản đo từng chặng (tài liệu, không copy)
@@ -264,6 +274,7 @@ khi* đọc ticket, code, ảnh hay file Excel.
 | `/qa-run` — còn case phải dò Phase 1 | ~19.100 |
 | `/qa-file-bugs` | ~4.700 |
 | `/qa-verify-prod` | ~3.600 |
+| `/qa-retro` — hai bản review song song | ~7.700 |
 
 Mỗi dòng = command body + agent body + skill được gọi + reference bắt buộc + **đúng
 mục `qa-config` mà chặng đó cần**. Đọc lại bằng:

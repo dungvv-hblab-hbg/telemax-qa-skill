@@ -1,5 +1,84 @@
 # Changelog — Telemax QA Harness
 
+## v3.7 — 2026-09-14
+
+`/qa-retro` — rà lại lượt chạy vừa xong để tìm chỗ **harness** hỏng.
+
+### Vấn đề
+
+Harness có năm điểm dừng cho người, nhưng cả năm đều hỏi *"kết quả test có đúng
+không"*. Không có chặng nào hỏi *"harness vừa chạy có ổn không"*. Lượt chạy TLM-3088 cho
+thấy khoảng trống đó tốn gì: bốn lỗi loại "sai âm thầm" nằm im qua cả pipeline, và chỉ
+lộ ra khi có người ngồi đọc lại toàn bộ artifact bằng tay.
+
+Ba lớp lỗi **không** tự lộ ra ở bất kỳ chặng nào:
+
+- **Sai âm thầm** — ra kết quả sai, không tín hiệu nào báo (mục G sai vì diff sai nguồn)
+- **Luật tự mâu thuẫn** — hai chỗ trong `.claude/` đòi hai thứ ngược nhau, hỏng với
+  **mọi** ticket chứ không riêng lượt này
+- **Có luật nhưng bị phớt lờ** — luật viết rõ mà lượt chạy không tuân
+
+### Luồng
+
+```
+[1] command thu bằng chứng CƠ HỌC  ──►  .qa/$1/retro-facts.md
+                       │
+      ┌────────────────┴────────────────┐
+      ▼                                 ▼
+retro-analyst (opus)          retro-analyst (fable)
+→ retro-A.md                  → retro-B.md
+      └────────────────┬────────────────┘
+                       ▼
+   [2] COMMAND đối chiếu + chạy lại "Lệnh kiểm" của TỪNG phát hiện
+                       ▼
+             .qa/$1/retro-<ngày>.md
+```
+
+**Một file agent, gọi hai lần với `model` khác nhau** — không phải hai file trùng nội
+dung.
+
+### Ba quyết định thiết kế
+
+1. **Command thu bằng chứng trước, agent không tự mò.** Hai agent đọc **cùng một bộ
+   số** (từ `write_defects.py --mode status`, `progress.log`, `state.json`, `git`,
+   `git check-ignore`). Để mỗi agent tự chạy lệnh thì chỗ chúng lệch nhau có thể chỉ vì
+   agent này gọi trúng lệnh còn agent kia thì không — mất sạch ý nghĩa của đối chiếu.
+
+2. **Mỗi phát hiện phải kèm `Lệnh kiểm` chạy được, và COMMAND chạy lại lệnh đó.** Không
+   qua → xuống mục "Đã bác bỏ" kèm output thật. Đây là phần giá trị nhất: ở bản review
+   harness gần nhất, cổng này bác được một phát hiện nghe rất hợp lý (*"5 tham chiếu
+   chết tới `docs/DEAD-ENDS.md`"*) — chạy lệnh ra file tồn tại, cả 5 link resolve.
+   **Hai agent không có cổng verify thì chỉ nhân đôi số phát hiện ảo.**
+
+3. **Không có agent thứ ba tổng hợp.** Command tự đối chiếu: nó chạy được lệnh, có người
+   dùng ở đó, và không thêm một chỗ nữa để mất kết quả — đúng lỗi return contract vừa
+   sửa ở v3.6.
+
+### Vì sao hai bản, không phải một
+
+Chỗ hai bản **cùng thấy** là tín hiệu mạnh · chỗ **chỉ một bản thấy** là chỗ cần soi kỹ
+· chỗ hai bản **mâu thuẫn** thường là một bên bịa. Một bản thì không có cái nào trong
+ba. Báo cáo có cột `Hai bản` (`A+B` / `A` / `B`) để thấy ngay.
+
+Phát hiện chỉ một bản thấy **không bị loại** vì lý do đó — nó vẫn qua đúng cổng lệnh như
+mọi phát hiện khác.
+
+### Ranh giới
+
+`/qa-retro` **chỉ xuất báo cáo markdown**: không sửa `.claude/`, không commit, không tạo
+PR. Sửa harness là lượt làm việc riêng, có review riêng — sửa hỏng một luật là hỏng mọi
+ticket sau.
+
+### Đụng vào đâu
+
+- `commands/qa-retro.md`, `agents/retro-analyst.md` — mới
+- `qa-state.sh`: thêm chặng thứ bảy `retro` (khai ở **hai** chỗ — bash và python)
+- `smoke-scripts.sh`: 3 ca mới, trong đó có ca bắt trường hợp khai thiếu một trong hai chỗ
+- `qa-status.md`: bảng bảy chặng; `retro` là chặng **tuỳ chọn**, không giục khi thiếu
+- README: 11 command / 9 agent, ngân sách token ~7.700
+
+**Không đụng** `/qa-analyze` và bộ ba `spec-analyst` / `code-analyst` / `test-analyst`.
+
 ## v3.6 — 2026-09-14
 
 Sửa 9 phát hiện từ lượt chạy full pipeline đầu tiên trên repo mới (TLM-3088, Telemax2).
