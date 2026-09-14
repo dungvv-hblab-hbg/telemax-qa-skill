@@ -43,9 +43,9 @@ trình của `/qa-apply-feedback`: cập nhật mục F, đổi độ tin, và *
 lý xuống section `## Đã xử lý (YYYY-MM-DD)`**.
 
 Agent **chỉ đọc checklist**. Không truyền câu trả lời qua khối đầu vào — đường đó không
-để lại dấu vết nào: ở TLM-3088, trả lời `#72`/`#74`/`#78` xong thì checklist **vẫn** ghi
-cả ba là `Low`/`Blocking`, sheet `Assumptions & Questions` **0 dòng dữ liệu**, và
-`state.json` ghi "không PROBLEMS" trong khi chặng trước vẫn ghi "#72 vẫn blocking".
+để lại dấu vết nào. Đã đo một lượt thật: trả lời ba câu mục F xong thì checklist **vẫn**
+ghi cả ba là `Low`/`Blocking`, sheet `Assumptions & Questions` **0 dòng dữ liệu**, và
+`state.json` ghi "không PROBLEMS" trong khi chặng trước vẫn ghi câu đầu "vẫn blocking".
 Đóng session là mất quyết định, lần chạy sau lại chặn ở đúng câu hỏi đã trả lời, và
 không truy được ai quyết gì, ngày nào.
 

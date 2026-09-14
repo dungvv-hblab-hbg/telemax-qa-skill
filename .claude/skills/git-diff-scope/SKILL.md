@@ -77,8 +77,8 @@ tín hiệu lần đầu đã hỏng ở đâu đó — đó chính là vùng re
 code của ticket phải ở trên `stage` mới được test, nên tới lúc harness chạy thì nhánh
 feature **luôn** cũ hơn `stage`. Diff ba chấm khi đó lôi vào mọi thứ người khác merge
 sau — sai **theo thiết kế**, không phải sai vì xui, và không có tín hiệu nào báo.
-Đo thật trên TLM-3088: nhánh feature cũ ~2 tuần, `stage...feature` kéo thêm ~65 dòng
-`PdfReportWriter.cs` là công việc của người khác.
+Đo được một ca: nhánh feature cũ ~2 tuần, `stage...feature` kéo thêm ~65 dòng trong một
+file là công việc người khác merge sau.
 
 **Không có commit trên `stage` → Cách A.** Lúc đó ticket chưa merge, nhánh feature mới
 là nguồn đúng.

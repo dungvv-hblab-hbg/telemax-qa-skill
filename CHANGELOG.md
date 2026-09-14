@@ -58,6 +58,19 @@ hiệu nào báo) và một lỗ rò credential.
 9. **Comment mẫu "Phản hồi review" dùng số mục thật** kèm câu trả lời nghe hợp lý —
    người review lướt qua dễ tưởng là quyết định đã chốt. Đổi sang `#N`.
 
+### Nguyên tắc áp dụng
+
+Mọi luật thêm vào `.claude/` được viết ở mức **cơ chế hỏng**, không phải mức một ticket
+hay một app. TLM-3088 chỉ là ca đo được — `.claude/` **không còn tham chiếu nào** tới nó;
+biên bản nằm ở `docs/DEAD-ENDS.md` §4-§5 và ở đây.
+
+Cụ thể: 5 bẫy locator mô tả theo **lớp** (dropdown tự chế · tag thật của trigger · so
+chuỗi con · `<select>` value-vs-label · field bắt buộc theo biến thể), selector Telemax
+chỉ đứng trong ngoặc làm ví dụ, kèm lời mời bổ sung lớp mới khi gặp ở repo khác. Lý do
+`.gitignore` phải tự chứa nêu theo **quy tắc neo pattern của git**, đúng với mọi bố cục
+thư mục con, không riêng `telemax-e2e/`. Luật `git-diff-scope` suy ra từ **ràng buộc cấu
+trúc của cổng 1 `/qa-run`**, nên đúng với mọi ticket đi qua harness.
+
 ### Không sửa (đã cân nhắc)
 
 - **5 tham chiếu `docs/DEAD-ENDS.md`**: báo cáo review nói là link chết. **Không đúng** —

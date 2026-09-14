@@ -30,7 +30,7 @@ export default defineConfig({
   // một số tab đứng ở trang trắng, và MỌI test trong worker đó fail ở beforeEach với
   // `expect(locator).toBeVisible() failed` + snapshot chỉ có `- img`. Triệu chứng
   // giống hệt selector hỏng, nên rất dễ đi sửa 30 selector vốn không hỏng.
-  // Đo trên TLM-3088: 24 fail khi chạy song song (5 worker), cùng bộ test pass hết
+  // Đo được: 24 fail khi chạy song song (5 worker), cùng bộ test pass hết
   // với --workers=1. Các FILE vẫn chạy song song; chỉ test trong CÙNG một file bị
   // tuần tự hoá — mà harness dùng một file cho một ticket, nên đây đúng là thứ cần.
   // Bật lại `true` chỉ khi đã đo được rằng app chịu được, đừng bật theo mặc định.

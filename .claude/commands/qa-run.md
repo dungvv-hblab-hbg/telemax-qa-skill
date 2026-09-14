@@ -173,7 +173,7 @@ Rồi ghi trạng thái, báo tôi số liệu đọc được, và hỏi có ch
 bash .claude/scripts/qa-state.sh set $1 run failed "agent kết thúc không tổng kết — <số liệu đọc từ file>"
 ```
 
-Gọi lại agent mù là trả thêm một lần nữa cái giá đã trả: ở TLM-3088 lượt đó tốn
+Gọi lại agent mù là trả thêm một lần nữa cái giá đã trả: lượt hỏng kiểu này từng tốn
 423k token / 349 tool call / 37 phút và vẫn không trả kết quả.
 
 Sau khi agent kết thúc, báo bằng tiếng Việt:

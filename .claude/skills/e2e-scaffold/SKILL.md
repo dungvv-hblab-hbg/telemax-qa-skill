@@ -82,8 +82,9 @@ người dùng duyệt; đụng vào project đang có tên khác thì hỏi, đ
      && echo OK || echo "CHƯA IGNORE"
    ```
    Không qua → thêm `.gitignore` tự chứa **vào trong thư mục e2e** (khối ở nhánh B),
-   **trước mọi bước khác**. Repo có sẵn Playwright là repo dễ dính nhất: `.gitignore`
-   gốc của họ được viết cho bố cục của họ, và pattern neo-gốc không với tới thư mục con.
+   **trước mọi bước khác**. Repo có sẵn Playwright là repo dễ dính nhất: `.gitignore` gốc
+   của họ viết cho bố cục của họ, và pattern neo-gốc không với tới thư mục con — kể cả
+   khi họ *đã* nghĩ tới việc ignore `playwright/.auth/`.
 
 ### B. Repo CHƯA CÓ, và là app web → scaffold theo app thật
 
@@ -116,21 +117,25 @@ node_modules/
 package-lock.json
 ```
 
-Lý do phải tự chứa: pattern **có dấu `/` ở giữa** như `playwright/.auth/` trong
-`.gitignore` ở **gốc repo** bị neo vào gốc — nó **không** khớp
-`<project e2e>/playwright/.auth/`. Đo thật trên repo Telemax2:
+**Lý do phải tự chứa — đúng với mọi repo, không riêng repo nào:** trong `.gitignore`,
+pattern **có dấu `/` ở giữa** (như `playwright/.auth/`) bị **neo vào thư mục chứa file
+`.gitignore` đó**. Nên một pattern như thế ở `.gitignore` **gốc repo** KHÔNG khớp
+`<project e2e>/playwright/.auth/`. Project e2e nằm trong thư mục con thì luôn dính lỗi
+này, bất kể thư mục tên gì.
 
-```
-$ git check-ignore -q telemax-e2e/playwright/.auth/user.json && echo IGNORED || echo "NOT IGNORED"
-NOT IGNORED
-```
+Hai thứ làm nó **không tự lộ ra**:
+- `git status` gộp cả cây chưa track thành **một dòng** `?? <project e2e>/` — nhìn bằng
+  mắt không thấy file secret bên trong, và `git add <project e2e>/` là commit luôn.
+- `storageState` là file do `npm run auth` sinh ra *sau* khi scaffold xong, nên lúc dựng
+  project chưa có gì để thấy.
 
-Và `git status` gộp cả cây thành **một dòng** `?? telemax-e2e/`, nên nhìn bằng mắt
-không thấy — `git add telemax-e2e/` là commit luôn file đó.
+Thứ bị rò không phải session cookie: app dùng token trong **localStorage** thì `user.json`
+có `cookies: []` và chứa **access token + refresh token**. Refresh token tái tạo được
+phiên sau khi access token hết hạn — rò nó nặng hơn rò một session cookie.
 
-`playwright/.auth/user.json` của app này chứa **`cookies: 0`** và
-**`authToken_*` + `refreshToken` trong localStorage**. Không phải session cookie:
-refresh token tái tạo được phiên sau khi access token hết hạn, nên rò nó nặng hơn.
+*(Đo trên repo Telemax2: `git check-ignore` trả `NOT IGNORED` cho
+`telemax-e2e/playwright/.auth/user.json`, file chứa `authToken_83` + `refreshToken`,
+`cookies: 0`.)*
 
 Sinh xong **phải verify bằng lệnh**, đừng tin pattern:
 

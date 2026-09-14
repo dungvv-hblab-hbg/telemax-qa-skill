@@ -282,9 +282,9 @@ Lưu file lại rồi chạy /qa-apply-feedback TLM-XXXX. -->
 **Ví dụ trong comment phải dùng số mục KHÔNG tồn tại trong checklist** (`#N`, `#999`)
 hoặc câu chung. **KHÔNG dùng số mục thật kèm một câu trả lời nghe hợp lý** — người
 review lướt qua rất dễ tưởng đó là quyết định đã chốt, và nó có thể **ngược** với quyết
-định thật. Gặp đúng ở TLM-3088: comment mẫu còn
-`#71 — product confirmed: time-first order is correct, no change` trong khi quyết định
-thật đã ghi ở "Đã xử lý" là **ngược lại** (date-first).
+định thật. Đã gặp: comment mẫu để lại một dòng dạng
+`#71 — product confirmed: time-first order is correct` trong khi quyết định thật ghi ở
+"Đã xử lý" là **ngược lại**.
 
 `/qa-apply-feedback` dọn **nội dung** người review viết, không dọn comment mẫu — nên
 comment mẫu sai sẽ sống qua mọi vòng review.

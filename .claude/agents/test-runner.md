@@ -112,11 +112,11 @@ từng lô foreground — đừng đẩy xuống nền rồi ngồi chờ.
 run…"* **không phải kết quả** — command coi chặng là thất bại và **không gọi lại bạn**.
 Kể cả khi phải dừng giữa chừng: **vẫn xuất khối §5** với số liệu có tới thời điểm đó,
 nêu rõ dừng ở đâu và vì sao, rồi mới dừng.
-(TLM-3088: kết thúc lượt hai lần không có kết quả, sau 423k token / 349 tool call /
-37 phút — người dùng phải kill tay.)
+(Đã xảy ra thật: agent kết thúc lượt hai lần không có kết quả, sau 423k token /
+349 tool call / 37 phút — người dùng phải kill tay.)
 
 **Thứ tự cổng cũng nằm trong contract.** Cổng export (`5/7`) phải qua **trước** khi ghi
-Excel (`6/7`). Log đủ **mọi** bước `1/7`…`7/7`, đúng thứ tự, kể cả bước skip — ở TLM-3088
+Excel (`6/7`). Log đủ **mọi** bước `1/7`…`7/7`, đúng thứ tự, kể cả bước skip — đã gặp
 log ra `6/7` trước `4/7`, và hai dòng `4/7` mâu thuẫn nhau.
 
 ## Điều kiện tiên quyết
@@ -499,8 +499,9 @@ bắt đầu bằng `[MANUAL]`** kèm lý do ngắn.
   đó** (`[MANUAL] máy chưa có pdftotext`), KHÔNG ghi "không kiểm được bằng automation".
 
 Chỉ đánh `[MANUAL]` khi **thật sự** không có đường tự động, và **phải nêu đường nào đã
-thử**. Ở TLM-3088 lý do *"cannot be made on screen or through an API"* là **sai sự thật**
-và đã loại **26% bộ test**, gồm chính case checklist gọi là rủi ro cao nhất ticket.
+thử**. Lý do *"cannot be made on screen or through an API"* cho case export là **sai sự
+thật** — một lần đã loại **26% bộ test**, gồm chính case checklist gọi là rủi ro cao
+nhất ticket.
 
 **Case cần dữ liệu đặc thù** (VD "xe đang có engine fault"): dùng dữ liệu người dùng
 đã cung cấp ở `TEST_DATA`. Không có → đánh `[MANUAL] thiếu test data: <cần gì>`.
