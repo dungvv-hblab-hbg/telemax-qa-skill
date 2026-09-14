@@ -35,6 +35,20 @@ rõ mặc định đề xuất. Không bao giờ hỏi mật khẩu/token qua ch
 | `cover.create_date` | hôm nay |
 | Tên file output | `TCs_<Module>_v<ver>.xlsx` |
 
+## Ghi câu trả lời vào checklist TRƯỚC khi gọi agent
+
+**Chạy thẳng, không subagent.** Mỗi câu tôi trả lời ở cổng đầu vào → ghi một dòng
+`#NN — <câu trả lời>` vào section **"Phản hồi review"** của checklist, rồi áp đúng quy
+trình của `/qa-apply-feedback`: cập nhật mục F, đổi độ tin, và **chuyển nội dung đã xử
+lý xuống section `## Đã xử lý (YYYY-MM-DD)`**.
+
+Agent **chỉ đọc checklist**. Không truyền câu trả lời qua khối đầu vào — đường đó không
+để lại dấu vết nào: ở TLM-3088, trả lời `#72`/`#74`/`#78` xong thì checklist **vẫn** ghi
+cả ba là `Low`/`Blocking`, sheet `Assumptions & Questions` **0 dòng dữ liệu**, và
+`state.json` ghi "không PROBLEMS" trong khi chặng trước vẫn ghi "#72 vẫn blocking".
+Đóng session là mất quyết định, lần chạy sau lại chặn ở đúng câu hỏi đã trả lời, và
+không truy được ai quyết gì, ngày nào.
+
 Trước khi gọi agent, nói với tôi một dòng: muốn theo dõi tiến trình thì mở terminal
 thứ hai và chạy `tail -f .qa/$1/progress.log`.
 
@@ -46,18 +60,24 @@ CHECKLIST: .qa/$1/checklist_$1.md
 OUTPUT_DIR: .qa/$1/
 COVER: (module / version / source / create_date tôi đã xác nhận)
 OUTPUT_FILE: (tên file tôi đã xác nhận)
-ĐÃ LÀM RÕ: (các ràng buộc/message tôi vừa trả lời)
 ```
+
+Khối này **không có** `ĐÃ LÀM RÕ`. Câu trả lời đã nằm trong checklist ở bước trên —
+một nguồn, có dấu vết, đọc lại được sau khi session đóng.
 
 Sau khi agent kết thúc, báo bằng tiếng Việt:
 1. Đường dẫn file Excel
 2. Tổng số case, phân bố theo Type và Priority
 3. **Độ phủ AC**: đã phủ bao nhiêu / tổng bao nhiêu. Còn AC nào `MISSING` thì nêu
    thẳng ra và nói rõ đây là lỗ hổng phải xử lý, không phải cảnh báo cho vui
-4. Mọi `PROBLEMS` mà `build.py` trả về
-5. Khối tổng kết đầu vào: tôi đã xác nhận gì, agent tự quyết gì (priority, chia
+4. Mọi `PROBLEMS` mà `build.py` trả về — trong đó **Note đánh dấu `[GĐ #NN]` mà sheet
+   `Assumptions & Questions` không có dòng** là lỗi phải sửa trước khi giao file, không
+   phải cảnh báo cho vui
+5. **Số dòng `Assumptions & Questions`** đã ghi (`assumptions_written`). Bằng 0 trong
+   khi mục F của checklist có câu hỏi được case dựa vào → nêu thẳng ra
+6. Khối tổng kết đầu vào: tôi đã xác nhận gì, agent tự quyết gì (priority, chia
    section, gán Type), còn treo gì
-6. Lời mời review: mở file, sửa/thêm/bớt case. Sửa xong muốn regenerate thì chạy
+7. Lời mời review: mở file, sửa/thêm/bớt case. Sửa xong muốn regenerate thì chạy
    lại `/qa-write-cases $1`; ổn rồi thì chạy `/qa-run $1`
 
 Đừng tự chạy test.

@@ -142,6 +142,29 @@ Yêu cầu độ chính xác: **đúng vị trí/đúng phần tử là đủ**,
 hảo tuyệt đối (theo chủ trương của team). Selector tạm chấp nhận được, miễn có
 đánh dấu để sau thay bằng thứ ổn định.
 
+### Bẫy locator trên dashboard này — đọc TRƯỚC khi viết selector
+
+Danh sách ưu tiên trên đúng cho control chuẩn. Năm chỗ dưới là control **tự chế** và
+`<select>` thật, nơi nó không cứu được (TLM-3088: spec fail 30/32, không lỗi nào là lỗi
+sản phẩm — biên bản ở [docs/DEAD-ENDS.md](../../../docs/DEAD-ENDS.md) §4).
+
+1. **Dropdown tự chế giữ MỌI option trong DOM kể cả khi đóng** → `div:text-is("X")`
+   khớp thẻ **đang ẩn** và click chờ hết timeout. Luôn `.filter({ visible: true })`.
+   **KHÔNG dùng `.last()` / `.first()` thay cho visible** — chúng chọn theo thứ tự DOM,
+   không theo cái đang hiện.
+2. **Nút mở dropdown thường KHÔNG phải `div`** (ở đây là
+   `span.field-searchable-select__selected-display`). Ghi **tag thật** ở Phase 1 rồi mới
+   viết selector, đừng suy từ hình dạng.
+3. **`hasText` / `getByText` là so chuỗi CON** → `'Idle Report'` khớp cả
+   `'Fleet Idle Report'`. So tên option bằng `{ exact: true }` hoặc `^...$`.
+4. **`<select>` thật: `selectOption('<nhãn>')` so theo VALUE, không phải label**
+   (`LastWeek` ≠ "Last 7 days"; 4/6 option lệch). Dùng `selectOption({ label })`, ghi
+   value đọc được ở Phase 1 vào comment.
+5. **Field bắt buộc khác nhau theo biến thể màn hình** — Geofence Report bắt chọn ô
+   Geofence, không dùng Vehicle. Thiếu một ô bắt buộc → form không submit → trang đứng ở
+   "Nothing run yet" → case đỏ **trông như** mất block dữ liệu. Ở Phase 1, với **mỗi biến
+   thể** ghi lại ô nào bắt buộc.
+
 ### Truy vết ngược về test case Excel
 - File đặt tên đúng mã ticket; mỗi `test()` mở đầu bằng `TC-Y-NNN — ` đúng TC ID trong
   Excel. Ticket + TC ID cùng nhau là khoá truy vết.
@@ -164,8 +187,20 @@ Bỏ qua:
 Case cần điều kiện dữ liệu đặc biệt (VD "xe đang có fault") → vẫn export được
 nhưng ghi rõ cần test data phù hợp, hoặc `test.skip` kèm lý do.
 
+**Case kiểm nội dung file export (.xlsx / .csv) LÀ export được, không phải manual:**
+
+```ts
+const dl = await page.waitForEvent('download');
+await dl.saveAs(path);
+```
+
+rồi assert trên nội dung file. PDF thì dùng `pdftotext` nếu máy có; không có mới
+`[MANUAL]`, và ghi đúng lý do đó ("máy chưa có pdftotext"), đừng ghi "không kiểm được
+bằng automation" — câu đó không đúng và nó bỏ rơi những case rủi ro cao nhất của ticket.
+
 Case thật sự không tự động hoá được thì **không export**, và báo lại cho
-`test-runner` để nó ghi `Blocked` + Note `[MANUAL] <lý do>` vào Excel. Bỏ lửng
+`test-runner` để nó ghi `Blocked` + Note `[MANUAL] <lý do>` vào Excel — **kèm đường nào
+đã thử**. Bỏ lửng
 case đó là để nó nằm `Not Run` mãi và làm sai `% Executed` ở Summary.
 
 ## Cấu trúc một file spec (theo assets/example.spec.ts)
@@ -255,6 +290,21 @@ chỉ duy nhất trong một ticket):
 ```bash
 cd telemax-e2e && npx playwright test --project=chromium tests/TLM-XXXX.spec.ts -g "TC-Y-NNN"
 ```
+
+**Hơn NỬA file fail ở lần verify đầu → nghi MÔI TRƯỜNG trước, đừng sửa selector:**
+
+```bash
+cd telemax-e2e && npx playwright test --project=chromium tests/TLM-XXXX.spec.ts --workers=1
+```
+
+Đỏ hàng loạt ở `beforeEach`, cùng một element, snapshot chỉ có `- img` = **SPA boot song
+song**, không phải selector sai (TLM-3088: 24/30 fail biến mất với 1 worker). Config
+template đã để `fullyParallel: false` — gặp triệu chứng này ở repo khác thì kiểm config
+trước tiên.
+
+Luật *"sửa 2 lần vẫn không khớp thì dừng"* là luật **cho từng case**. Khi quá nửa file
+cùng đỏ thì nguyên nhân mang tính **hệ thống** — áp luật per-case vào đó là đi sửa 30 chỗ
+vốn không hỏng.
 
 Đối chiếu với kết quả Phase 1:
 

@@ -18,8 +18,11 @@
 .env
 .env.*
 !.env.example
-# storageState sau khi login
+# storageState sau khi login — chứa authToken/refreshToken SỐNG.
+# Cần CẢ HAI dòng: pattern có `/` ở giữa bị neo vào gốc repo, nên `playwright/.auth/`
+# KHÔNG khớp `telemax-e2e/playwright/.auth/`. Dòng `**/` mới là dòng thật sự chặn.
 playwright/.auth/
+**/playwright/.auth/
 storageState.json
 test-results/
 playwright-report/

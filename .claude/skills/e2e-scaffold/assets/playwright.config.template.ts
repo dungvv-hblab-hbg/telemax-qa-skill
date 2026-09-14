@@ -1,13 +1,14 @@
 /**
  * KHUÔN playwright.config.ts cho repo mới cài harness QA.
  *
- * Thay mọi <PLACEHOLDER> rồi xoá dòng này. Bốn thứ bên dưới là HÀNG RÀO của harness,
+ * Thay mọi <PLACEHOLDER> rồi xoá dòng này. NĂM thứ bên dưới là HÀNG RÀO của harness,
  * không phải tuỳ chọn phong cách — đọc comment trước khi sửa:
  *
  *   1. project `prod` có `grep: /@prod-safe/`
  *   2. storageState staging và production là hai file khác nhau
  *   3. project staging tên `chromium` để mọi lệnh truyền --project được
  *   4. trace/screenshot/video bật, vì bug cần Actual Result thật
+ *   5. fullyParallel: false + workers: 2 — chống fail GIẢ hàng loạt do SPA boot song song
  */
 import { defineConfig, devices } from '@playwright/test';
 import * as dotenv from 'dotenv';
@@ -24,13 +25,22 @@ export default defineConfig({
   // Spec của ticket: tests/<TICKET-ID>.spec.ts — MỘT FILE CHO MỘT TICKET.
   testDir: './tests',
 
-  // Tắt nếu test đụng cùng bản ghi trên staging (case Create/Delete chạy song song
-  // sẽ giẫm lên nhau, và triệu chứng trông y hệt một bug sản phẩm).
-  fullyParallel: true,
+  // TẮT CÓ CHỦ ĐÍCH — hàng rào, không phải tuỳ chọn phong cách.
+  // SPA nặng (Blazor WASM, Angular, bundle lớn): nhiều browser cùng boot app sẽ khiến
+  // một số tab đứng ở trang trắng, và MỌI test trong worker đó fail ở beforeEach với
+  // `expect(locator).toBeVisible() failed` + snapshot chỉ có `- img`. Triệu chứng
+  // giống hệt selector hỏng, nên rất dễ đi sửa 30 selector vốn không hỏng.
+  // Đo trên TLM-3088: 24 fail khi chạy song song (5 worker), cùng bộ test pass hết
+  // với --workers=1. Các FILE vẫn chạy song song; chỉ test trong CÙNG một file bị
+  // tuần tự hoá — mà harness dùng một file cho một ticket, nên đây đúng là thứ cần.
+  // Bật lại `true` chỉ khi đã đo được rằng app chịu được, đừng bật theo mặc định.
+  fullyParallel: false,
 
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+
+  // `undefined` = số core / 2 (5 worker trên Mac 8 nhân) — quá nhiều cho một SPA nặng.
+  workers: process.env.CI ? 1 : 2,
 
   // 30s mặc định hay đứt oan trên SPA có bản đồ/biểu đồ. Nới ở đây, đừng rải sleep.
   timeout: 60_000,

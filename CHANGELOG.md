@@ -1,5 +1,70 @@
 # Changelog — Telemax QA Harness
 
+## v3.6 — 2026-09-14
+
+Sửa 9 phát hiện từ lượt chạy full pipeline đầu tiên trên repo mới (TLM-3088, Telemax2).
+Harness **chạy được và ra kết quả đúng** — 31 case, AC coverage 6/6, 1 dòng defect gộp
+đúng root cause. Nhưng bốn lỗi thuộc loại **"sai âm thầm"** (ra kết quả sai, không tín
+hiệu nào báo) và một lỗ rò credential.
+
+### High
+
+1. **`git-diff-scope` mâu thuẫn cấu trúc với `/qa-run`.** `/qa-run` cổng 1 bắt buộc code
+   phải đã lên `stage` mới được test → nhánh feature **luôn** cũ hơn `stage` → cách diff
+   đang ưu tiên (`origin/stage...<branch>`) **sai theo thiết kế**, không phải sai vì xui.
+   TLM-3088 lôi vào ~65 dòng của người khác. Thêm **Bước 0**: kiểm ticket đã merge chưa
+   *trước* khi chọn cách; đã merge → diff theo commit merge (`git diff <sha>^ <sha>`).
+   Chuỗi revert → áp lại phải ghi vào mục A — đó là vùng regression đáng test nhất.
+
+2. **Scaffold không tự gitignore secret của chính nó.** Pattern `playwright/.auth/` ở
+   `.gitignore` gốc có `/` ở giữa nên **bị neo vào gốc repo**, không khớp
+   `telemax-e2e/playwright/.auth/`. File đó chứa `authToken_*` + `refreshToken` **sống**
+   (0 cookie — session nằm trong localStorage), và `git status` gộp thành một dòng
+   `?? telemax-e2e/` nên nhìn mắt không thấy. `e2e-scaffold` nay sinh `.gitignore` **tự
+   chứa** trong thư mục e2e; `gitignore.snippet` thêm `**/playwright/.auth/`;
+   `/qa-setup` + `/qa-doctor` thêm hàng kiểm bằng `git check-ignore`.
+
+3. **`fullyParallel: true` trong template** → fail giả hàng loạt trên SPA nặng, triệu
+   chứng y hệt selector hỏng. Đổi `false` + `workers: 2`. Biên bản: `DEAD-ENDS.md` §5.
+
+4. **Câu trả lời ở cổng `/qa-write-cases` không được lưu ở đâu cả** — khối `ĐÃ LÀM RÕ`
+   chỉ sống trong transcript. Sheet `Assumptions & Questions` có sẵn trong template
+   nhưng `build.py` **không có code path nào** ghi vào đó. Nay: command ghi câu trả lời
+   vào checklist *trước* khi gọi agent; `cases.json` nhận mảng `assumptions`; `build.py`
+   đổ vào sheet và cảnh báo khi Note đánh dấu `[GĐ #NN]` mà không có dòng tương ứng.
+
+### Medium
+
+5. **`test-runner` không có return contract** — kết thúc lượt hai lần bằng "đang chờ
+   background run…" sau 423k token / 349 tool call / 37 phút. Thêm luật cấm chạy nền +
+   bắt buộc trả khối tổng kết §5; `/qa-run` thêm nhánh xử khi agent trả về rỗng (đọc số
+   liệu từ Excel, **không** gọi lại agent mù).
+
+6. **`playwright-export` thiếu bẫy locator thật của app** — spec fail 30/32 lần chạy
+   đầu, 0 lỗi sản phẩm. Thêm 5 bẫy + luật "quá nửa file đỏ → nghi môi trường trước, đừng
+   sửa selector". Biên bản: `DEAD-ENDS.md` §4.
+
+7. **Case đọc file export bị đánh `[MANUAL]` dù harness làm được** — 26% bộ test không
+   được đo vì một lý do sai, gồm chính case rủi ro cao nhất ticket. Playwright tải file
+   được, `qa-py.sh` đã có openpyxl.
+
+8. **`qa-config.md` ship default tự mâu thuẫn** — `Trạng thái: CÓ` + `telemax-e2e/`
+   trong khi `install.sh` không còn copy thư mục đó, mà chính file này quy định trạng
+   thái ấy là "SAI CẤU HÌNH: DỪNG". `install.sh` nay tự đặt `CHƯA CÓ` khi cài không kèm
+   `--with-e2e`; bảng trạng thái thêm ngoại lệ cho `/qa-setup`.
+
+### Low
+
+9. **Comment mẫu "Phản hồi review" dùng số mục thật** kèm câu trả lời nghe hợp lý —
+   người review lướt qua dễ tưởng là quyết định đã chốt. Đổi sang `#N`.
+
+### Không sửa (đã cân nhắc)
+
+- **5 tham chiếu `docs/DEAD-ENDS.md`**: báo cáo review nói là link chết. **Không đúng** —
+  file tồn tại, cả 5 link resolve, lint xác nhận.
+- Cascade từ một dòng phản hồi · tách 3 agent ở `/qa-analyze` · `[MANUAL]` chặn defect ·
+  luật gộp defect · cổng `stage` và `[DATA-REQ]` — đều đang chạy đúng thiết kế.
+
 ## v3.5 — 2026-09-10
 
 Trạng thái xuyên chặng: resume được, và biết mình đang ở đâu.

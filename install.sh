@@ -94,6 +94,25 @@ else
   say "  Repo đích là app Telemax khác, cùng form login? Chạy lại với --with-e2e."
 fi
 
+# ── qa-config: Trạng thái Playwright phải khớp thứ VỪA copy ──────────────
+# Bản trong repo harness ghi `CÓ` vì telemax-e2e/ tồn tại ở đó. Copy nguyên sang một
+# repo KHÔNG được copy e2e là để lại `CÓ` + thư mục không tồn tại — mà chính file đó
+# quy định trạng thái ấy là "SAI CẤU HÌNH: DỪNG, báo". Người mới cài đâm vào hàng rào
+# này ngay bước đầu, trước khi /qa-setup kịp dựng gì.
+QC="$TARGET/.claude/qa-config.md"
+if [ "$WITH_E2E" != 1 ]; then
+  if [ "$DRY" = 1 ]; then
+    say "[dry-run] đặt Trạng thái Playwright = CHƯA CÓ trong qa-config.md"
+  elif [ -f "$QC" ]; then
+    # Chỉ đụng đúng dòng Trạng thái trong mục Playwright (dòng duy nhất mở đầu bằng
+    # `| **Trạng thái** | **\`CÓ\`**`); mục Postman có dòng Trạng thái riêng, khác chuỗi.
+    perl -i -pe 's/^\| \*\*Trạng thái\*\* \| \*\*`CÓ`\*\*/| **Trạng thái** | **`CHƯA CÓ`**/' "$QC"
+    say "qa-config.md -> Trạng thái Playwright = CHƯA CÓ (chưa có project e2e)"
+  fi
+else
+  say "qa-config.md -> giữ Trạng thái Playwright = CÓ (đã copy telemax-e2e/)"
+fi
+
 # ── .gitignore ───────────────────────────────────────────────────────────
 GI="$TARGET/.gitignore"
 if [ -f "$GI" ] && grep -q "playwright-mcp-profile" "$GI" 2>/dev/null; then

@@ -108,8 +108,8 @@ bị và vị trí cuối cùng. Dành cho Fleet Manager và Viewer. Kết quả
 ---
 ## Phản hồi review
 <!-- Viết phản hồi vào đây. VD:
-  #4 sai — maxlength thật là 100, không phải 255
-  #11 bỏ, không thuộc scope ticket
+  #N sai — maxlength thật là <số>, không phải 255
+  #N bỏ, không thuộc scope ticket
   Còn lại OK.
 Lưu file lại rồi chạy /qa-apply-feedback TLM-XXXX. -->
 

@@ -46,6 +46,12 @@ Chờ tôi trả lời xong mới gọi agent. Đừng đoán thay tôi.
 2. **Nhánh base để so diff** — mặc định **`stage`** (nhánh build ra dashboard-stage,
    `bash .claude/scripts/qa-config.sh ticket`). Không phải `dev`, không phải `master`. Nêu ra để tôi
    xác nhận hoặc đổi.
+
+   Kiểm luôn **ticket đã có commit trên `origin/stage` chưa** (lệnh ở Bước 0 của skill
+   `git-diff-scope`) rồi nêu cho tôi cách diff sẽ dùng: **đã merge → diff theo commit
+   merge (`git diff <sha>^ <sha>`)**; **chưa merge → diff nhánh ba chấm**. **Đừng mặc
+   định `stage...feature`** — ticket đã merge thì nhánh feature luôn cũ hơn `stage` và
+   diff đó lôi vào công việc của người khác, im lặng, không có tín hiệu nào báo.
 3. **Không tìm thấy commit/nhánh của ticket** — hỏi tôi: code chưa xong, hay ticket
    này không đụng code? Câu trả lời quyết định checklist có mục G hay không.
 **Không hỏi về Figma ở đây.** Chỉ agent mới đọc ticket, nên hỏi "ticket có link

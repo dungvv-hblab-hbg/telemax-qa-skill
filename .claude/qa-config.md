@@ -70,7 +70,7 @@ Tạo bug vào nhầm list là rác cho người khác dọn. Còn `CHƯA ĐIỀ
 
 | Khoá | Giá trị |
 |---|---|
-| **Trạng thái** | **`CÓ`** · giá trị khác: `CHƯA CÓ` · `KHÔNG DÙNG` (nghĩa của từng cái ở cuối mục) |
+| **Trạng thái** | **`CÓ`** · giá trị hợp lệ: `CÓ` · `CHƯA CÓ` · `KHÔNG DÙNG` (nghĩa của từng cái ở cuối mục). **Repo mới cài:** `install.sh` mặc định KHÔNG copy project e2e, nên nó tự đặt dòng này thành `CHƯA CÓ` khi cài — giá trị `CÓ` ở đây là của chính repo harness, nơi `telemax-e2e/` tồn tại thật |
 | Thư mục project | `telemax-e2e/` ở gốc repo. **Mọi lệnh `npx playwright` phải chạy từ trong thư mục này** — agent đứng ở gốc repo nên luôn `cd telemax-e2e &&` trước |
 | File spec | `telemax-e2e/tests/TLM-XXXX.spec.ts` |
 | Config | `telemax-e2e/playwright.config.ts` |
@@ -98,7 +98,7 @@ Tạo bug vào nhầm list là rác cho người khác dọn. Còn `CHƯA ĐIỀ
 
 | Trạng thái | Nghĩa |
 |---|---|
-| `CÓ` + thư mục **không** tồn tại | **SAI CẤU HÌNH**, không phải "chưa có": DỪNG, báo. Không tự tạo, không đoán vị trí khác |
+| `CÓ` + thư mục **không** tồn tại | **SAI CẤU HÌNH**, không phải "chưa có": DỪNG, báo. Không tự tạo, không đoán vị trí khác. **Ngoại lệ duy nhất: đang chạy `/qa-setup`** — đó chính là chặng được phép dựng, và nó đổi Trạng thái sau khi dựng xong |
 | `CHƯA CÓ` | chạy `/qa-setup` — skill `e2e-scaffold` dò repo, hỏi, rồi dựng. Agent KHÔNG tự init giữa chặng test |
 | `KHÔNG DÙNG` | nhánh UI **skip, KHÔNG chặn `/qa-run`**: case UI ghi `Blocked` + `[MANUAL] không dùng project e2e — chạy tay`. Hợp lệ khi repo chỉ có API, hoặc team dùng framework khác |
 

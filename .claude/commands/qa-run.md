@@ -158,6 +158,24 @@ SESSION_OK: (đã seed/xác nhận ở cổng 6 lúc <giờ>, hoặc "?" nếu c
 `MCP_OK` và `SESSION_OK` có giá trị → agent **dùng thẳng, không kiểm lại**. Ghi `?`
 thì agent tự kiểm như cũ (trường hợp có ai gọi agent trực tiếp, không qua command).
 
+**Agent trả về mà KHÔNG có khối tổng kết + số P/F/B** — VD chỉ nói "đang chờ background
+run…" — thì coi là **thất bại**, và **KHÔNG gọi lại agent**. Artifact trên đĩa mới là sự
+thật, đọc số liệu từ đó:
+
+```bash
+bash .claude/scripts/qa-py.sh .claude/skills/testcase-template/scripts/write_defects.py \
+  --file .qa/$1/<file.xlsx> --mode status
+```
+
+Rồi ghi trạng thái, báo tôi số liệu đọc được, và hỏi có chạy lại với `RESUME: có` không:
+
+```bash
+bash .claude/scripts/qa-state.sh set $1 run failed "agent kết thúc không tổng kết — <số liệu đọc từ file>"
+```
+
+Gọi lại agent mù là trả thêm một lần nữa cái giá đã trả: ở TLM-3088 lượt đó tốn
+423k token / 349 tool call / 37 phút và vẫn không trả kết quả.
+
 Sau khi agent kết thúc, báo bằng tiếng Việt:
 1. Số Pass / Fail / Blocked — tách riêng **Blocked vì chờ chạy tay `[MANUAL]`** và
    **Blocked vì vướng dependency thật**

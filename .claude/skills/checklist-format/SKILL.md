@@ -270,14 +270,24 @@ file:
 ---
 ## Phản hồi review
 <!-- Viết phản hồi vào đây. VD:
-  #4 sai — maxlength thật là 100, không phải 255
-  #11 bỏ, không thuộc scope ticket
-  #98 — khách xác nhận có role view-only, Edit ẩn với họ
+  #N sai — maxlength thật là <số>, không phải 255
+  #N bỏ, không thuộc scope ticket
+  #N — khách xác nhận có role view-only, Edit ẩn với họ
   Còn lại OK.
 Lưu file lại rồi chạy /qa-apply-feedback TLM-XXXX. -->
 
 (để trống cho người review)
 ```
+
+**Ví dụ trong comment phải dùng số mục KHÔNG tồn tại trong checklist** (`#N`, `#999`)
+hoặc câu chung. **KHÔNG dùng số mục thật kèm một câu trả lời nghe hợp lý** — người
+review lướt qua rất dễ tưởng đó là quyết định đã chốt, và nó có thể **ngược** với quyết
+định thật. Gặp đúng ở TLM-3088: comment mẫu còn
+`#71 — product confirmed: time-first order is correct, no change` trong khi quyết định
+thật đã ghi ở "Đã xử lý" là **ngược lại** (date-first).
+
+`/qa-apply-feedback` dọn **nội dung** người review viết, không dọn comment mẫu — nên
+comment mẫu sai sẽ sống qua mọi vòng review.
 
 Cơ chế: người review ghi vào section này rồi lưu file → chạy
 `/qa-apply-feedback TLM-XXXX` → Claude áp các chỉnh sửa vào đúng mục (theo số thứ
@@ -310,3 +320,4 @@ agent điều phối; skill chỉ quy định file phải có section này và �
 - [ ] Số thứ tự mới được append ở cuối, không chèn giữa, không đánh lại
 - [ ] Xuất ra file `.qa/TLM-XXXX/checklist_TLM-XXXX.md`
 - [ ] Kết thúc bằng section Phản hồi review để người dùng chỉnh sửa
+- [ ] Ví dụ trong comment mẫu dùng `#N` / `#999`, **không** dùng số mục thật của checklist
