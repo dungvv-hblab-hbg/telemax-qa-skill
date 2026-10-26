@@ -48,7 +48,11 @@ g = lambda p: sorted(glob.glob(os.path.join(d, p)))
 print(json.dumps({
     "analysis_spec":  bool(g("analysis-spec.md")),
     "analysis_code":  bool(g("analysis-code.md")),
+    "analysis_ui":    bool(g("analysis-ui.md")),
     "checklist":      bool(g(f"checklist_{t}.md")),
+    "findings":       bool(g(f"findings_{t}.md")),
+    "spec_draft":     bool(g(f"spec-draft_{t}.md")),
+    "spec_signed":    bool(g(f"spec-signed_{t}.md")),
     "testcase_xlsx":  [os.path.basename(x) for x in g("*.xlsx")],
     "bugs_proposed":  bool(g("bugs-proposed.json")),
     "phase1_shots":   len(g("phase1/*.png")),

@@ -59,7 +59,9 @@ Cùng một thao tác lỗi 3 lần liên tiếp (ClickUp) → DỪNG, báo ngư
 
 ## Quy trình
 
-### 1. Đọc danh sách bug cần tạo
+### 1. Đọc danh sách bug cần tạo — HAI NGUỒN, chọn theo đầu vào
+
+**Nguồn thường: file Excel** (`TESTCASE_FILE`), sau khi đã chạy test.
 ```
 bash .claude/scripts/qa-py.sh .claude/skills/testcase-template/scripts/write_defects.py --file <out.xlsx> --mode read
 ```
@@ -67,6 +69,25 @@ Trả về mọi dòng **chưa có Bug ID** và **chưa có Fix Status**. Dòng 
 `Won't fix` được bỏ qua — đó là cách họ nói "không tạo bug cho case này".
 
 Đọc phần `skipped` và ghi lại case nào bị loại vì lý do gì.
+
+**Nguồn thứ hai: `FINDINGS_FILE`** (`.qa/<TICKET>/findings_<TICKET>.md`) — ticket không
+có spec nên không có test case Excel; phát hiện đến thẳng từ `/qa-analyze`. Đọc file,
+mỗi khối `### F-xx` là một bug. Map thẳng sang các trường dưới:
+
+| Trong findings | Thành |
+|---|---|
+| `F-xx` | thay chỗ của `tc_id` |
+| tiêu đề khối | `title` |
+| `Mức` | `priority` |
+| `Steps` / `Expected` / `Actual` | y nguyên |
+| `Chuẩn vi phạm` | **thêm vào cuối Description** — đây là căn cứ thay cho AC, thiếu nó thì dev đọc bug không biết dựa vào đâu mà bảo là sai |
+| `Căn cứ code` (`file:dòng`) | dùng để đề xuất assignee ở bước 2 |
+| `Ảnh` | `evidence` |
+
+Người dùng đã xoá dòng nào khỏi file trước khi chạy lệnh → dòng đó **không tồn tại**,
+đó là cách họ từ chối. Đừng đi tìm lại.
+
+**Cả hai nguồn cùng trống hoặc cùng có** → không tự chọn, kết thúc và nêu rõ.
 
 **Danh sách rỗng là kết quả hợp lệ**, không phải lỗi: vẫn ghi file đề xuất với
 `bugs: []`, nêu rõ trong tổng kết, rồi kết thúc. Command sẽ bỏ qua bước tạo bug và
@@ -98,6 +119,7 @@ Ghi `.qa/<TICKET>/bugs-proposed.json`:
 ```json
 {
   "ticket": "TLM-2901",
+  "source": "excel",
   "testcase_file": ".qa/TLM-2901/TCs_Vehicle-Detail_v1.0.xlsx",
   "clickup_list": "<list đích>",
   "bugs": [
@@ -118,6 +140,10 @@ Ghi `.qa/<TICKET>/bugs-proposed.json`:
   "skipped": [{ "tc_id": "TC-B-002", "reason": "Won't fix" }]
 }
 ```
+
+Nguồn là findings thì `"source": "findings"`, `"testcase_file": null`,
+`"findings_file": ".qa/<TICKET>/findings_<TICKET>.md"`, và `tc_id` mang mã `F-xx`.
+`bug-filer` đọc `source` để biết ghi Bug ID về đâu.
 
 **KẾT THÚC ở đây.** Không tạo bug, không writeback, không upload. Báo lại: bao nhiêu
 bug đề xuất, bao nhiêu bị loại và vì sao, bao nhiêu nghi trùng với bug đã có.

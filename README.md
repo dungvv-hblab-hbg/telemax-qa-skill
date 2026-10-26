@@ -6,7 +6,7 @@ Bộ agentic workflow cho quy trình QA của Telemax, chạy trên **Claude Cod
 ticket → checklist → test case Excel → chạy test (UI/API) → bug ClickUp → verify production
 ```
 
-Mười một slash command, chín subagent, tám skill.
+Mười một slash command, mười subagent, tám skill.
 
 Người mới: đọc **[docs/TUTORIAL.md](docs/TUTORIAL.md)** — hướng dẫn từng bước, đầu vào
 và đầu ra của mỗi chặng. Bản tiếng Anh: [docs/TUTORIAL.en.md](docs/TUTORIAL.en.md).
@@ -121,9 +121,18 @@ interpreter có openpyxl (`.claude/.venv` → `$QA_PYTHON` → `.qa/.venv` → `
     -> .qa/TLM-2901/checklist_TLM-2901.md, kèm mục D6 "spec ≠ code"
     ▸ DỪNG — bạn review, ghi phản hồi vào section "Phản hồi review"
 
+    ticket KHÔNG có spec (chỉ tiêu đề, hoặc tính năng cũ không ai tạo ticket)
+    -> spec-analyst báo SPEC_INSUFFICIENT, command DỪNG và hỏi bạn một lượt:
+       a) săn bug ngay   b) a + dựng spec ngược để ký   c) bạn tự bổ sung AC
+    -> ui-explorer (dò staging, cấm đọc code) ∥ analysis-code.md đã có
+    -> findings_TLM-2901.md  [+ spec-draft_TLM-2901.md nếu chọn b]
+    ▸ DỪNG — xoá dòng không đồng ý; chọn b thì ký ✅/❌/❓ từng dòng
+
 /qa-apply-feedback TLM-2901          (chỉ khi có ghi phản hồi — không sửa gì thì bỏ qua)
     áp phản hồi, giữ nguyên số thứ tự cũ
     ▸ DỪNG — review lại
+    (có spec-draft) ✅ -> mô tả ticket ClickUp · ❌ -> bug · ❓ -> comment hỏi BA
+    ▸ DỪNG — duyệt cả lô trước khi ghi ra ClickUp
 
 /qa-write-cases TLM-2901
     checklist -> Excel 8 sheet + Traceability (AC -> TC)
@@ -177,8 +186,9 @@ chạy bằng `npx playwright test` cũng đổ vào cùng file.
 .claude/                          thứ được copy sang repo đích
 ├─ qa-config.md                   ĐIỂM KHAI BÁO DUY NHẤT — nhánh, path, ClickUp list
 ├─ commands/                      11 slash command — điểm vào, chờ người dùng được
-├─ agents/                        9 subagent — chạy một chặng rồi kết thúc
-│  └─ reference/                  tri thức chỉ một nhánh cần (Phase 1 browser)
+├─ agents/                        10 subagent — chạy một chặng rồi kết thúc
+│  └─ reference/                  tri thức chỉ một nhánh cần (Phase 1 browser,
+│                                 nhánh không-có-spec)
 ├─ skills/                        8 skill — tri thức tĩnh, nạp theo nhu cầu
 └─ scripts/
    ├─ qa-log.sh                   in tiến trình + ghi progress.log
@@ -241,6 +251,11 @@ session** trong repo. Tri thức chỉ dùng cho một tác vụ thì để ở 
   được, không `H1`/`endpoint`/tên class trong phần UI.
 - **Có ticket rồi hãy chạy.** Dán spec thẳng vào chat thì `/qa-analyze` dừng và bảo tạo
   ticket trước, hoặc tạo giúp trên ClickUp rồi chạy tiếp luôn.
+- **Không có spec thì nói là không có, đừng nặn spec từ code.** Checklist suy từ chính
+  code chỉ chứng minh "code làm đúng cái code đang làm" — nó xanh cả bộ và không bao giờ
+  đỏ ở chỗ cần đỏ. Nhánh không-có-spec vì vậy chỉ khẳng định thứ sai **bất kể yêu cầu là
+  gì** (validate thiếu ở BE, quyền không check, nhánh lỗi không xử, lệch nhất quán); mọi
+  thứ cần ý định con người đều thành dòng `❓` chờ người ký, không được tự ✅ cho đủ bộ.
 
 ---
 
@@ -267,8 +282,10 @@ khi* đọc ticket, code, ảnh hay file Excel.
 | | Tokens |
 |---|---|
 | Luôn nạp mọi session (frontmatter của skill + agent + command) | ~2.000 |
-| `/qa-analyze` | ~11.000 |
-| `/qa-apply-feedback` | ~8.500 |
+| `/qa-analyze` | ~11.700 |
+| `/qa-analyze` — nhánh không-có-spec (thêm `ui-explorer` + reference) | ~17.100 |
+| `/qa-apply-feedback` | ~8.800 |
+| `/qa-apply-feedback` — nhánh ký duyệt spec ngược | ~12.100 |
 | `/qa-write-cases` | ~10.500 |
 | `/qa-run` — spec đã có (round 2 trở đi) | ~13.800 |
 | `/qa-run` — còn case phải dò Phase 1 | ~19.100 |

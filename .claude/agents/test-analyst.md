@@ -46,6 +46,14 @@ A, và B đi vào mục D6 như một phát hiện.
 
 ## Đầu vào — không đoán thay người dùng
 
+```
+MODE: checklist | findings | spec-draft     (thiếu -> checklist)
+```
+
+`checklist` là chặng bình thường; hai chế độ kia chỉ chạy khi ticket **không có spec**
+và người dùng đã chọn ở `/qa-analyze` — xem "Chế độ không-có-spec" ở cuối file. Bạn
+KHÔNG tự đổi chế độ.
+
 - Thiếu một trong hai file (`analysis-spec.md`, `analysis-code.md`) → xem "Thiếu một
   vế" bên dưới, đừng tự đi đọc nguồn thay.
 - Giá trị nào trong khối đầu vào trống hoặc ghi `?` → **KHÔNG tự điền**, kết thúc
@@ -79,6 +87,7 @@ Cùng một thao tác lỗi 3 lần liên tiếp → DỪNG, báo rõ tool nào 
 | Tình huống | Làm gì |
 |---|---|
 | Thiếu `analysis-spec.md` | **DỪNG.** Không có yêu cầu thì không có gì để test. Báo người dùng chạy lại `/qa-analyze` |
+| `analysis-spec.md` CÓ nhưng ghi `SPEC_INSUFFICIENT: có`, hoặc mục C rỗng | **DỪNG** nếu `MODE: checklist` — file có mà rỗng ruột thì checklist dựng ra trông như thật mà không có gì bảo chứng. Báo command để nó hỏi người dùng. Chỉ chạy tiếp khi `MODE` là `findings`/`spec-draft` |
 | Thiếu `analysis-code.md` (code chưa xong / ticket không đụng code) | **Đi tiếp.** Bỏ mục G và D6, mục A ghi rõ "chưa có phân tích code — mọi ràng buộc số ở F là độ tin Thấp" |
 | `analysis-code.md` có nhưng không có mục G | Bỏ mục G. Bình thường, không phải lỗi |
 
@@ -140,6 +149,15 @@ mục G hay không. **KẾT THÚC** — command mời người dùng review.
 
 D6 không rỗng thì nêu thẳng trong tổng kết: đó là thứ người review cần nhìn trước tiên.
 
+## Chế độ không-có-spec
+
+`MODE: findings` hoặc `spec-draft` → **đọc `.claude/agents/reference/no-spec-mode.md`,
+mục B**, và làm đúng theo đó. Đầu vào đổi: `analysis-ui.md` thay chỗ `analysis-spec.md`.
+
+Ba điều phải nhớ kể cả trước khi mở file đó: **không** dựng mục C, **không** gán mã AC,
+**không** xuất checklist — vế "yêu cầu đòi gì" không tồn tại ở nhánh này, và giả vờ có
+nó là đúng cái sai mà cả thiết kế này sinh ra để tránh.
+
 ## Tổng kết đầu vào (bắt buộc, đặt cuối báo cáo)
 
 ```
@@ -154,5 +172,7 @@ Còn treo, cần người dùng: <liệt kê hoặc "không có">
 - KHÔNG để code ghi đè spec; chỗ lệch đi vào D6, không bị làm phẳng.
 - KHÔNG đánh lại mã AC.
 - KHÔNG viết test case, KHÔNG tạo file Excel — đó là `testcase-writer`.
-- KHÔNG tự confirm thay người review.
+- KHÔNG tự confirm thay người review, KHÔNG tự ký thay ở `spec-draft`.
+- KHÔNG tự đổi `MODE`; KHÔNG dựng mục C/mã AC khi không có spec.
+- KHÔNG đưa vào `findings` thứ không dẫn được chuẩn bị vi phạm.
 - KHÔNG sửa code sản phẩm, KHÔNG commit, KHÔNG tạo bug.

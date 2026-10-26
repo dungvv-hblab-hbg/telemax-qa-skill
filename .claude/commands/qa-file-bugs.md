@@ -25,6 +25,15 @@ rõ mặc định đề xuất. Không bao giờ hỏi mật khẩu/token qua ch
 
 Gộp thành một lượt hỏi:
 
+0. **Nguồn nào** — kiểm trước khi hỏi gì khác:
+
+   | Có trong `.qa/$1/` | Nguồn |
+   |---|---|
+   | file `.xlsx` | sheet Defects (luồng thường) — hỏi tiếp từ mục 1 |
+   | `findings_$1.md`, không có `.xlsx` | ticket không có spec, phát hiện đến thẳng từ `/qa-analyze`. **Bỏ mục 1, 2 và 4** — không có file test case để review trên Drive, cũng không có gì để upload |
+   | cả hai | hỏi tôi lấy nguồn nào. Đừng gộp |
+   | không cái nào | dừng, bảo tôi chạy `/qa-run $1` hoặc `/qa-analyze $1` trước |
+
 1. **Tôi đã review sheet Defects trên bản LOCAL hay trên Google Drive?** Là Drive
    thì dừng, yêu cầu tôi tải file về ghi đè bản local — script chỉ đọc bản local.
 2. **File nào** trong `.qa/$1/` nếu có nhiều hơn một. Đừng tự chọn.
@@ -44,7 +53,8 @@ thứ hai và chạy `tail -f .qa/$1/progress.log`.
 
 ```
 TICKET: $1
-TESTCASE_FILE: (file tôi đã chọn)
+TESTCASE_FILE: (file .xlsx tôi đã chọn — bỏ trống nếu đi nguồn findings)
+FINDINGS_FILE: (.qa/$1/findings_$1.md — bỏ trống nếu đi nguồn Excel)
 CLICKUP_LIST: (giá trị từ qa-config hoặc tôi vừa đưa)
 ```
 

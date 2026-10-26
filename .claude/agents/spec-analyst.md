@@ -78,6 +78,28 @@ dùng lại đúng mã bạn gán, đừng đánh lại.
 
 Ticket không mở được (sai ID, không quyền) → dừng, báo. Không đoán nội dung.
 
+### 1b. Ticket có đủ dữ kiện không — ĐẾM, ĐỪNG PHÁN
+
+Ticket rỗng ruột (VD chỉ có tiêu đề "Test Order Module") tạo ra một `analysis-spec.md`
+mỏng trông y hệt file bình thường, và chặng sau sẽ dựng ra một checklist trông như
+thật. **Không có tín hiệu nào báo.** Nên bạn phải đếm và báo ra.
+
+Ba con số, không diễn giải:
+
+- số AC đọc được
+- số từ của phần mô tả (không tính tiêu đề)
+- có link Figma không
+
+**0 AC · mô tả dưới 30 từ · không Figma** → ghi `SPEC_INSUFFICIENT: có` ở dòng đầu mục
+A, ghi file, **KẾT THÚC NGAY**. Không phân tích tiếp: không có gì để phân tích. Thiếu
+một phần thôi (có AC nhưng mô tả ngắn, hoặc không Figma nhưng AC rõ) thì **không phải**
+rỗng — chạy tiếp bình thường.
+
+**Bạn báo sự kiện, không báo kết luận.** Viết "0 AC, mô tả 3 từ, không Figma"; KHÔNG
+viết "ticket này không test được". Cùng dấu hiệu đó có thể là ticket QA cố ý rỗng, hoặc
+ticket dev mà dev quên điền mô tả — hai đường xử ngược nhau. **Người dùng quyết ở
+command**, không phải bạn: KHÔNG tự chuyển sang dò UI, KHÔNG tự bịa AC từ tiêu đề.
+
 ### 2. Đọc Figma
 `FIGMA` trong khối đầu vào có link → dùng. Không có → tự tìm link trong ticket.
 
@@ -100,6 +122,7 @@ tự** — việc đánh số toàn tài liệu là của bước tổng hợp.
 (KHÔNG đọc source code. Mọi dòng ở đây đến từ yêu cầu, không từ hiện trạng hệ thống.)
 
 ## A. Nguồn đã đọc
+- SPEC_INSUFFICIENT: có / không  — (AC: <n> · mô tả: <n> từ · Figma: có/không)
 - Ticket ClickUp: <mã>, mở được / không, <n> comment
 - Figma: <tên từng frame>
 - Không truy cập được: <gì, ảnh hưởng ra sao>
@@ -139,6 +162,8 @@ Danh sách ngắn: những khẳng định của spec cần đối chiếu với
 ```
 
 **KẾT THÚC.** Báo: số AC, số mục ở C, số điểm mờ độ tin Thấp, và những gì không đọc được.
+**Cờ `SPEC_INSUFFICIENT` bật thì nêu nó ở DÒNG ĐẦU báo cáo**, kèm ba con số — command đọc
+dòng đó để biết có phải dừng lại hỏi người dùng không.
 
 ## Tổng kết đầu vào (bắt buộc, đặt cuối báo cáo)
 
@@ -150,6 +175,7 @@ Còn treo, cần người dùng: <liệt kê hoặc "không có">
 
 ## Ranh giới (không vượt)
 - **KHÔNG đọc source code, schema, git diff, file test** — dưới bất kỳ lý do nào.
+- KHÔNG tự quyết khi cờ `SPEC_INSUFFICIENT` bật — chỉ báo, command hỏi người dùng.
 - KHÔNG viết checklist cuối (đó là `test-analyst`), KHÔNG viết test case.
 - KHÔNG tự kết nối MCP; KHÔNG nhận token qua chat.
 - KHÔNG sửa code, commit, tạo bug.

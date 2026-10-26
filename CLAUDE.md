@@ -23,7 +23,7 @@ thứ `install.sh` copy sang repo đích, vừa là thứ đang chạy ở chín
 
 Đọc trước khi sửa `.claude/`:
 
-- [README.md](README.md) — luồng 8 command / 5 agent / 7 skill, và mục **Ngân sách
+- [README.md](README.md) — luồng 11 command / 10 agent / 8 skill, và mục **Ngân sách
   token** với bốn quy tắc chi phối mọi thứ thêm vào `.claude/`
 - [.claude/qa-config.md](.claude/qa-config.md) — điểm khai báo duy nhất. Đọc **theo
   mục**: `bash .claude/scripts/qa-config.sh <ticket|clickup|playwright|production|postman>`
